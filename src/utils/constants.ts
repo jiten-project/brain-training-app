@@ -46,21 +46,38 @@ export const getRequiredCorrectCount = (level: number): number => {
 export const GAME_MODE_CONFIG = {
   [GameMode.BEGINNER]: {
     name: '初級',
-    description: '正解枚数 + 10枚',
-    difficulty: '★☆☆',
-    getChoiceCount: (correctCount: number, _level: number) => correctCount + 10,
+    description: '正解枚数 + 6枚',
+    difficulty: '★☆☆☆',
+    getChoiceCount: (correctCount: number, _level: number) => correctCount + 6,
   },
   [GameMode.INTERMEDIATE]: {
     name: '中級',
-    description: '正解枚数 × 3倍',
-    difficulty: '★★☆',
-    getChoiceCount: (correctCount: number, _level: number) => correctCount * 3,
+    description: '正解枚数 × 2倍',
+    difficulty: '★★☆☆',
+    getChoiceCount: (correctCount: number, _level: number) => correctCount * 2,
   },
   [GameMode.ADVANCED]: {
     name: '上級',
-    description: 'レベル1-10: 50枚 / レベル11-20: 100枚',
-    difficulty: '★★★',
-    getChoiceCount: (_correctCount: number, level: number) => (level <= 10 ? 50 : 100),
+    description: 'レベル帯別（24/48/72/96枚）',
+    difficulty: '★★★☆',
+    getChoiceCount: (_correctCount: number, level: number) => {
+      if (level <= 5) return 24;
+      if (level <= 10) return 48;
+      if (level <= 15) return 72;
+      return 96;
+    },
+  },
+  [GameMode.EXPERT]: {
+    name: '超級',
+    description: '上級 + パネルが動く',
+    difficulty: '★★★★',
+    getChoiceCount: (_correctCount: number, level: number) => {
+      // 上級と同じ選択肢数
+      if (level <= 5) return 24;
+      if (level <= 10) return 48;
+      if (level <= 15) return 72;
+      return 96;
+    },
   },
 };
 
@@ -92,6 +109,7 @@ export const UI_CONFIG = {
 export const STORAGE_KEYS = {
   USER_PROGRESS: 'user_progress',
   USER_SETTINGS: 'user_settings',
+  PLAY_HISTORY: 'play_history',
 };
 
 /**
@@ -99,17 +117,37 @@ export const STORAGE_KEYS = {
  */
 export const DEFAULT_SETTINGS = {
   gameMode: GameMode.BEGINNER,
-  soundEnabled: true,
+  hintEnabled: true, // ヒントはデフォルトでON（高齢者向け）
 };
 
 /**
  * 応援メッセージ
  */
 export const ENCOURAGEMENT_MESSAGES = {
-  PERFECT: ['パーフェクト！', '素晴らしい！', '完璧です！'], // 100%
-  CLEARED: ['よくできました！', '次も頑張りましょう！', 'クリアです！'], // 80-99%
-  CLOSE: ['あと少し！', 'もう一度挑戦！', '惜しい！'], // 60-79%
-  FAILED: ['次は頑張りましょう！', '練習あるのみ！', 'もう一度！'], // 0-59%
+  PERFECT: [
+    '🎉 パーフェクト！素晴らしい！',
+    '✨ 完璧です！すごいですね！',
+    '🌟 最高の出来です！',
+    '👏 100点満点！素晴らしい！',
+  ], // 100%
+  CLEARED: [
+    '😊 よくできました！',
+    '👍 すばらしい！クリアです！',
+    '🎊 合格です！よく頑張りました！',
+    '✌️ やりましたね！',
+  ], // 80-99%
+  CLOSE: [
+    '💪 もう少しです！頑張って！',
+    '😄 いい感じですよ！',
+    '⭐ 惜しい！次は必ずできます！',
+    '👌 だんだん良くなっています！',
+  ], // 60-79%
+  FAILED: [
+    '📚 練習すればきっとできます！',
+    '🌈 次はもっと良くなりますよ！',
+    '💫 諦めないで頑張りましょう！',
+    '🎯 何度でも挑戦しましょう！',
+  ], // 0-59%
 };
 
 /**
@@ -128,4 +166,15 @@ export const getEncouragementMessage = (accuracy: number): string => {
           : ENCOURAGEMENT_MESSAGES.FAILED;
 
   return messages[Math.floor(Math.random() * messages.length)];
+};
+
+/**
+ * ミリ秒を「秒.ミリ秒」形式にフォーマット
+ * @param ms ミリ秒
+ * @returns フォーマットされた時間文字列 (例: "3.45")
+ */
+export const formatTime = (ms: number): string => {
+  const seconds = Math.floor(ms / 1000);
+  const milliseconds = Math.floor((ms % 1000) / 10); // 10ms単位
+  return `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
 };

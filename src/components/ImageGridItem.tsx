@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
 import { Text, Surface } from 'react-native-paper';
 import { ImageData } from '../types';
 
@@ -11,40 +11,133 @@ interface Props {
   selectable?: boolean;
   selected?: boolean;
   onPress?: () => void;
+  resultMode?: boolean; // 結果表示モード
+  isCorrect?: boolean; // 正解かどうか（結果モード用）
+  wasSelected?: boolean; // 選択されたかどうか（結果モード用）
+  shufflePosition?: { x: number; y: number }; // シャッフル時の移動先座標
 }
 
-const ImageGridItem: React.FC<Props> = ({
+const ImageGridItem: React.FC<Props> = React.memo(({
   image,
   columns,
   selectable = false,
   selected = false,
   onPress,
+  resultMode = false,
+  isCorrect = false,
+  wasSelected = false,
+  shufflePosition,
 }) => {
-  const itemSize = (screenWidth - 32 - (columns - 1) * 12) / columns;
+  // 常に6列のサイズで計算（2列の場合も同じサイズ）
+  const itemSize = (screenWidth - 32 - (6 - 1) * 12) / 6;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const translateXAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+
+  // 初回表示時のフェードインアニメーション（控えめ）
+  useEffect(() => {
+    Animated.timing(opacityAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [opacityAnim]);
+
+  // 選択時のスケールアニメーション
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: selected ? 1.05 : 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [selected, scaleAnim]);
+
+  // シャッフル位置が変更された時のアニメーション
+  useEffect(() => {
+    if (shufflePosition) {
+      Animated.parallel([
+        Animated.timing(translateXAnim, {
+          toValue: shufflePosition.x,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateYAnim, {
+          toValue: shufflePosition.y,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [shufflePosition, translateXAnim, translateYAnim]);
+
+  // 結果モードでの背景色とマーク
+  const getResultStyle = () => {
+    if (!resultMode) return null;
+
+    if (wasSelected && isCorrect) {
+      // 選択した & 正解 → 緑背景 + ○
+      return styles.resultCorrect;
+    } else if (wasSelected && !isCorrect) {
+      // 選択した & 不正解 → 赤背景 + ×
+      return styles.resultIncorrect;
+    } else if (!wasSelected && isCorrect) {
+      // 選択してない & 正解（見逃し） → 青背景 + ○
+      return styles.resultMissed;
+    }
+    // 選択してない & 不正解 → 通常
+    return null;
+  };
+
+  const getResultMark = () => {
+    if (!resultMode) return null;
+
+    if (wasSelected && isCorrect) {
+      return <Text style={styles.correctMark}>⭕️</Text>;
+    } else if (wasSelected && !isCorrect) {
+      return <Text style={styles.incorrectMark}>❌</Text>;
+    }
+    // 選択されなかった正解にはマークをつけない（背景色のみ）
+    return null;
+  };
 
   return (
-    <TouchableOpacity
-      onPress={selectable ? onPress : undefined}
-      disabled={!selectable}
-      activeOpacity={selectable ? 0.7 : 1}
+    <Animated.View
+      style={{
+        opacity: opacityAnim,
+        transform: [
+          { scale: scaleAnim },
+          { translateX: translateXAnim },
+          { translateY: translateYAnim },
+        ],
+      }}
     >
-      <Surface
-        style={[
-          styles.surface,
-          {
-            width: itemSize,
-            height: itemSize,
-          },
-          selected && styles.selected,
-        ]}
-        elevation={selected ? 8 : 4}
+      <TouchableOpacity
+        onPress={selectable ? onPress : undefined}
+        disabled={!selectable}
+        activeOpacity={selectable ? 0.7 : 1}
       >
-        <Text style={styles.emoji}>{image.uri}</Text>
-        {selected && <Text style={styles.checkmark}>✓</Text>}
-      </Surface>
-    </TouchableOpacity>
+        <Surface
+          style={[
+            styles.surface,
+            {
+              width: itemSize,
+              height: itemSize,
+            },
+            selected && styles.selected,
+            getResultStyle(),
+          ]}
+          elevation={selected ? 4 : 2}
+        >
+          <Text style={styles.emoji}>{image.uri}</Text>
+          {selected && !resultMode && <Text style={styles.checkmark}>✓</Text>}
+          {getResultMark()}
+        </Surface>
+      </TouchableOpacity>
+    </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   surface: {
@@ -53,9 +146,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     position: 'relative',
+    padding: 0,
   },
   emoji: {
-    fontSize: 48,
+    fontSize: 42,
   },
   selected: {
     backgroundColor: '#E3F2FD',
@@ -69,6 +163,33 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#2196F3',
     fontWeight: 'bold',
+  },
+  resultCorrect: {
+    backgroundColor: '#C8E6C9',
+    borderWidth: 3,
+    borderColor: '#4CAF50',
+  },
+  resultIncorrect: {
+    backgroundColor: '#FFCDD2',
+    borderWidth: 3,
+    borderColor: '#F44336',
+  },
+  resultMissed: {
+    backgroundColor: '#BBDEFB',
+    borderWidth: 3,
+    borderColor: '#2196F3',
+  },
+  correctMark: {
+    position: 'absolute',
+    top: 4,
+    right: 8,
+    fontSize: 24,
+  },
+  incorrectMark: {
+    position: 'absolute',
+    top: 4,
+    right: 8,
+    fontSize: 24,
   },
 });
 

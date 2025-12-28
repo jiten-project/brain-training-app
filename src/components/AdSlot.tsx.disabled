@@ -1,0 +1,82 @@
+/**
+ * 広告スロットコンポーネント
+ * Google AdMobのバナー広告を表示（Pro版では非表示）
+ */
+
+import React, { useState } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { useEntitlements } from '../contexts/EntitlementsContext';
+
+interface Props {
+  position?: 'top' | 'bottom'; // 広告の位置
+}
+
+// AdMobユニットID（本番用に置き換える必要あり）
+const AD_UNIT_IDS = {
+  ios: {
+    banner: __DEV__ ? TestIds.BANNER : 'ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY',
+  },
+  android: {
+    banner: __DEV__ ? TestIds.BANNER : 'ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY',
+  },
+};
+
+const AdSlot: React.FC<Props> = ({ position = 'bottom' }) => {
+  const { isPro, loading } = useEntitlements();
+  const [adLoaded, setAdLoaded] = useState(false);
+  const [adError, setAdError] = useState(false);
+
+  // Pro版 or ロード中は広告を表示しない
+  if (isPro || loading) {
+    return null;
+  }
+
+  // 広告エラー時も非表示
+  if (adError) {
+    return null;
+  }
+
+  // プラットフォームに応じた広告ユニットIDを取得
+  const adUnitId = Platform.select({
+    ios: AD_UNIT_IDS.ios.banner,
+    android: AD_UNIT_IDS.android.banner,
+    default: TestIds.BANNER,
+  });
+
+  return (
+    <View style={[styles.container, position === 'top' ? styles.top : styles.bottom]}>
+      <BannerAd
+        unitId={adUnitId}
+        size={BannerAdSize.BANNER}
+        requestOptions={{
+          requestNonPersonalizedAdsOnly: false,
+        }}
+        onAdLoaded={() => {
+          setAdLoaded(true);
+          setAdError(false);
+        }}
+        onAdFailedToLoad={(error) => {
+          console.log('Ad failed to load:', error);
+          setAdError(true);
+        }}
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  top: {
+    marginBottom: 4,
+  },
+  bottom: {
+    marginTop: 4,
+  },
+});
+
+export default AdSlot;

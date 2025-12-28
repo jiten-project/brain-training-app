@@ -64,24 +64,30 @@ const shuffleArray = <T>(array: T[]): T[] => {
  * ゲーム結果を判定
  * @param correctImages 正解画像
  * @param selectedImages ユーザーが選択した画像
+ * @param choiceImages 選択肢の全画像
  * @param level レベル番号
+ * @param memorizeTime 記憶時間（ミリ秒）
+ * @param answerTime 回答時間（ミリ秒）
  * @returns ゲーム結果
  */
 export const evaluateGameResult = (
   correctImages: ImageData[],
   selectedImages: ImageData[],
-  level: number
+  choiceImages: ImageData[],
+  level: number,
+  memorizeTime: number,
+  answerTime: number
 ): GameResult => {
   const correctIds = correctImages.map(img => img.id);
   const selectedIds = selectedImages.map(img => img.id);
 
-  // 正解数を計算
+  // 正解数を計算（正しく選択された枚数）
   const correctCount = selectedIds.filter(id => correctIds.includes(id)).length;
 
   // 全体の枚数
   const totalCount = correctImages.length;
 
-  // 正解率を計算
+  // 正解率を計算: 正解数 / 全体の枚数 × 100
   const accuracy = Math.round((correctCount / totalCount) * 100);
 
   // クリア判定 (80%以上)
@@ -100,6 +106,10 @@ export const evaluateGameResult = (
     accuracy,
     isCleared,
     selectedResults,
+    choiceImages,
+    correctImages,
+    memorizeTime,
+    answerTime,
   };
 };
 

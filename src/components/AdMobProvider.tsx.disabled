@@ -1,0 +1,51 @@
+/**
+ * AdMob初期化Provider
+ * アプリ起動時にAdMobを初期化する
+ */
+
+import React, { useEffect, useState, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import mobileAds, { MaxAdContentRating } from 'react-native-google-mobile-ads';
+
+interface Props {
+  children: ReactNode;
+}
+
+export const AdMobProvider: React.FC<Props> = ({ children }) => {
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const initializeAdMob = async () => {
+      try {
+        // AdMobを初期化
+        await mobileAds().initialize();
+
+        // 高齢者向けアプリとして適切な広告設定
+        await mobileAds().setRequestConfiguration({
+          // 最大広告コンテンツ評価を「G（全年齢対象）」に設定
+          maxAdContentRating: MaxAdContentRating.G,
+          // 子供向け扱いにはしない（高齢者向けのため）
+          tagForChildDirectedTreatment: false,
+          // 未成年向け扱いにもしない
+          tagForUnderAgeOfConsent: false,
+        });
+
+        console.log('AdMob initialized successfully');
+        setInitialized(true);
+      } catch (error) {
+        console.error('AdMob initialization failed:', error);
+        // 初期化失敗してもアプリは動作させる
+        setInitialized(true);
+      }
+    };
+
+    initializeAdMob();
+  }, []);
+
+  // 初期化完了まで待つ（広告表示の準備ができるまで）
+  if (!initialized) {
+    return null; // またはローディング表示
+  }
+
+  return <>{children}</>;
+};

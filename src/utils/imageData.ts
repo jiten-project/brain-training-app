@@ -100,7 +100,7 @@ const animalImages: ImageData[] = [
   { id: 'animal_23', uri: '🐺', category: 'animal', name: 'おおかみ' },
   { id: 'animal_24', uri: '🐗', category: 'animal', name: 'いのしし' },
   { id: 'animal_25', uri: '🐴', category: 'animal', name: '馬' },
-  { id: 'animal_26', uri: '🦄', category: 'animal', name': 'ユニコーン' },
+  { id: 'animal_26', uri: '🦄', category: 'animal', name: 'ユニコーン' },
   { id: 'animal_27', uri: '🐝', category: 'animal', name: '蜂' },
   { id: 'animal_28', uri: '🐛', category: 'animal', name: 'いもむし' },
   { id: 'animal_29', uri: '🦋', category: 'animal', name: '蝶' },
@@ -157,6 +157,20 @@ export const getImageById = (id: string): ImageData | undefined => {
 };
 
 /**
+ * Fisher-Yatesアルゴリズムで配列をシャッフル
+ * @param array シャッフルする配列
+ * @returns シャッフルされた配列
+ */
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+/**
  * ランダムに画像を取得
  * @param count 取得する枚数
  * @param excludeIds 除外する画像ID (オプション)
@@ -164,6 +178,6 @@ export const getImageById = (id: string): ImageData | undefined => {
  */
 export const getRandomImages = (count: number, excludeIds: string[] = []): ImageData[] => {
   const availableImages = ALL_IMAGES.filter(img => !excludeIds.includes(img.id));
-  const shuffled = [...availableImages].sort(() => Math.random() - 0.5);
+  const shuffled = shuffleArray(availableImages);
   return shuffled.slice(0, count);
 };

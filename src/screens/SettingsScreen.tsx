@@ -16,17 +16,21 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { settings, updateSettings, resetProgress } = useGame();
 
   const [gameMode, setGameMode] = useState<GameMode>(settings.gameMode);
-  const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
+  const [hintEnabled, setHintEnabled] = useState(settings.hintEnabled);
 
   // 設定が変更された場合、ローカルステートを更新
   useEffect(() => {
     setGameMode(settings.gameMode);
-    setSoundEnabled(settings.soundEnabled);
+    setHintEnabled(settings.hintEnabled);
   }, [settings]);
 
   const handleSave = async () => {
-    await updateSettings({ gameMode, soundEnabled });
-    navigation.goBack();
+    try {
+      await updateSettings({ gameMode, hintEnabled });
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('エラー', '設定の保存に失敗しました。もう一度お試しください。');
+    }
   };
 
   const handleReset = () => {
@@ -39,8 +43,12 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           text: 'リセット',
           style: 'destructive',
           onPress: async () => {
-            await resetProgress();
-            Alert.alert('完了', 'データをリセットしました');
+            try {
+              await resetProgress();
+              Alert.alert('完了', 'データをリセットしました');
+            } catch (error) {
+              Alert.alert('エラー', 'データのリセットに失敗しました。もう一度お試しください。');
+            }
           },
         },
       ]
@@ -71,20 +79,26 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </Card.Content>
         </Card>
 
-        {/* 音声設定 */}
+        {/* ヒント機能設定 */}
         <Card style={styles.card}>
           <Card.Content>
-            <Text style={styles.sectionTitle}>音声設定</Text>
+            <Text style={styles.sectionTitle}>ヒント機能</Text>
             <Divider style={styles.divider} />
 
             <View style={styles.switchContainer}>
-              <Text style={styles.switchLabel}>効果音</Text>
-              <Switch value={soundEnabled} onValueChange={setSoundEnabled} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchLabel}>ヒント機能を使う</Text>
+                <Text style={styles.hintDescription}>
+                  初級: 間違い選択肢を半分に減らす{'\n'}
+                  中級: 正解を2秒間再表示する
+                </Text>
+              </View>
+              <Switch value={hintEnabled} onValueChange={setHintEnabled} />
             </View>
           </Card.Content>
         </Card>
 
-        {/* データリセット (将来実装) */}
+        {/* データリセット */}
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.sectionTitle}>データ管理</Text>
@@ -98,6 +112,34 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               textColor="#F44336"
             >
               全データをリセット
+            </Button>
+          </Card.Content>
+        </Card>
+
+        {/* 法的情報 */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>法的情報</Text>
+            <Divider style={styles.divider} />
+
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Legal', { type: 'terms' })}
+              style={styles.legalButton}
+              labelStyle={styles.legalButtonLabel}
+              icon="file-document-outline"
+            >
+              利用規約
+            </Button>
+
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
+              style={[styles.legalButton, { marginTop: 12 }]}
+              labelStyle={styles.legalButtonLabel}
+              icon="shield-account-outline"
+            >
+              プライバシーポリシー
             </Button>
           </Card.Content>
         </Card>
@@ -161,11 +203,24 @@ const styles = StyleSheet.create({
     fontSize: UI_CONFIG.MIN_FONT_SIZE,
     fontWeight: 'bold',
   },
+  hintDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    lineHeight: 20,
+  },
   resetButton: {
     borderColor: '#F44336',
     borderWidth: 2,
   },
   resetButtonLabel: {
+    fontSize: UI_CONFIG.MIN_FONT_SIZE,
+  },
+  legalButton: {
+    borderColor: '#6200EE',
+    borderWidth: 1,
+  },
+  legalButtonLabel: {
     fontSize: UI_CONFIG.MIN_FONT_SIZE,
   },
   buttonContainer: {
@@ -179,8 +234,59 @@ const styles = StyleSheet.create({
     minHeight: UI_CONFIG.MIN_BUTTON_SIZE,
   },
   saveButtonLabel: {
-    fontSize: UI_CONFIG.IMPORTANT_FONT_SIZE,
+    fontSize: UI_CONFIG.MIN_FONT_SIZE,
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingText: {
+    fontSize: UI_CONFIG.MIN_FONT_SIZE,
+    marginLeft: 12,
+    color: '#666',
+  },
+  purchasedContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  purchasedText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  purchasedSubText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+  },
+  purchaseDescription: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  purchaseButton: {
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  purchaseButtonLabel: {
+    fontSize: UI_CONFIG.MIN_FONT_SIZE,
+    fontWeight: 'bold',
+  },
+  restoreButton: {
+    marginTop: 8,
+  },
+  restoreButtonLabel: {
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F44336',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });
 
