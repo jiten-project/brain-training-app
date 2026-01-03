@@ -52,8 +52,20 @@ export enum GamePhase {
   COUNTDOWN_MEMORIZE = 'countdown_memorize', // 記憶フェーズ前のカウントダウン
   MEMORIZE = 'memorize', // 記憶フェーズ
   COUNTDOWN_ANSWER = 'countdown_answer', // 回答フェーズ前のカウントダウン
+  CALCULATION = 'calculation', // 計算フェーズ（超級モードのみ）
   ANSWER = 'answer', // 回答フェーズ
   RESULT = 'result', // 結果フェーズ
+}
+
+/**
+ * 計算問題
+ */
+export interface MathProblem {
+  id: string; // 一意のID
+  num1: number; // 1つ目の数字
+  num2: number; // 2つ目の数字
+  operator: '+' | '-'; // 演算子
+  answer: number; // 正解
 }
 
 /**

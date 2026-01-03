@@ -3,7 +3,7 @@
  * ゲームの各種処理を提供
  */
 
-import { ImageData, GameMode, GameResult, SelectedResult } from '../types';
+import { ImageData, GameMode, GameResult, SelectedResult, MathProblem } from '../types';
 import { getRandomImages } from './imageData';
 import { getImageCount, GAME_MODE_CONFIG, CLEAR_CONDITION } from './constants';
 
@@ -133,4 +133,55 @@ export const isNextLevelAvailable = (
   maxUnlockedLevel: number
 ): boolean => {
   return currentLevel < 20 && currentLevel < maxUnlockedLevel;
+};
+
+/**
+ * 2桁の足し算・引き算の計算問題を生成
+ * @returns 計算問題
+ */
+export const generateMathProblem = (): MathProblem => {
+  const id = `math_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const operator = Math.random() < 0.5 ? '+' : '-';
+
+  let num1: number;
+  let num2: number;
+  let answer: number;
+
+  if (operator === '+') {
+    // 足し算: 10〜99の2桁の数字同士、答えが200以下
+    num1 = Math.floor(Math.random() * 90) + 10; // 10〜99
+    // 答えが200以下になるように調整
+    const maxNum2 = Math.min(99, 200 - num1);
+    const minNum2 = 10;
+    if (maxNum2 < minNum2) {
+      // num1が大きすぎる場合は調整
+      num2 = Math.floor(Math.random() * (maxNum2 - 1)) + 1;
+    } else {
+      num2 = Math.floor(Math.random() * (maxNum2 - minNum2 + 1)) + minNum2;
+    }
+    answer = num1 + num2;
+  } else {
+    // 引き算: num1とnum2両方が2桁(10〜99)で、答えが正の数になる
+    // num1: 20〜99（num2が10以上になるように）
+    num1 = Math.floor(Math.random() * 80) + 20; // 20〜99
+    // num2: 10〜(num1-1)の範囲で2桁の数（最大でもnum1-1）
+    const maxNum2 = Math.min(99, num1 - 1);
+    num2 = Math.floor(Math.random() * (maxNum2 - 10 + 1)) + 10; // 10〜maxNum2
+    answer = num1 - num2;
+  }
+
+  return { id, num1, num2, operator, answer };
+};
+
+/**
+ * 計算問題を複数生成
+ * @param count 生成する問題数
+ * @returns 計算問題の配列
+ */
+export const generateMathProblems = (count: number): MathProblem[] => {
+  const problems: MathProblem[] = [];
+  for (let i = 0; i < count; i++) {
+    problems.push(generateMathProblem());
+  }
+  return problems;
 };

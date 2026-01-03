@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { Text, Button, Card, IconButton, Portal, Dialog } from 'react-native-paper';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { Text, Button, Card } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, GamePhase, ImageData, GameMode } from '../types';
-import { UI_CONFIG, formatTime } from '../utils/constants';
-import { generateCorrectImages, generateChoiceImages, evaluateGameResult } from '../utils/gameLogic';
+import { RootStackParamList, GamePhase, ImageData, GameMode, MathProblem } from '../types';
+import { UI_CONFIG, formatTime, MATH_REQUIRED_CORRECT_COUNT } from '../utils/constants';
+import { generateCorrectImages, generateChoiceImages, evaluateGameResult, generateMathProblem } from '../utils/gameLogic';
 import { useGame } from '../contexts/GameContext';
 import ImageGridItem from '../components/ImageGridItem';
-
-const screenWidth = Dimensions.get('window').width;
 
 type GameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Game'>;
 type GameScreenRouteProp = RouteProp<RootStackParamList, 'Game'>;
@@ -33,12 +31,17 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
   const [memorizeElapsedTime, setMemorizeElapsedTime] = useState<number>(0);
   const [answerStartTime, setAnswerStartTime] = useState<number>(0);
   const [answerElapsedTime, setAnswerElapsedTime] = useState<number>(0);
-  const [shufflePositions, setShufflePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
-  const [displayCorrectImages, setDisplayCorrectImages] = useState<ImageData[]>([]); // 超級モード用: 表示する画像（中身だけシャッフル）
 
   // ヒント機能の状態
   const [hintUsed, setHintUsed] = useState(false); // ヒントが使用されたか
   const [showingHint, setShowingHint] = useState(false); // ヒント表示中か
+
+  // 計算フェーズの状態（超級モード用）
+  const [currentMathProblem, setCurrentMathProblem] = useState<MathProblem | null>(null);
+  const [mathCorrectCount, setMathCorrectCount] = useState(0); // 正解した問題数
+  const [mathAnswer, setMathAnswer] = useState(''); // ユーザーの回答入力
+  const [mathFeedback, setMathFeedback] = useState<'correct' | 'incorrect' | null>(null); // 正誤フィードバック
+  const mathInputRef = useRef<TextInput>(null);
 
   // ゲーム初期化
   useEffect(() => {
@@ -46,7 +49,6 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
       // 正解の画像をランダムに選択
       const correct = generateCorrectImages(level);
       setCorrectImages(correct);
-      setDisplayCorrectImages(correct); // 最初は元のまま表示
 
       // 設定に応じた選択肢を生成
       const choices = generateChoiceImages(correct, level, settings.gameMode);
@@ -99,52 +101,28 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
     return () => clearInterval(interval);
   }, [phase, answerStartTime]);
 
-  // 超級モードで記憶フェーズ時に3秒ごとに画像の中身だけをシャッフル
-  useEffect(() => {
-    if (phase !== GamePhase.MEMORIZE || settings.gameMode !== GameMode.EXPERT) return;
-
-    const shuffleInterval = setInterval(() => {
-      setDisplayCorrectImages(prevImages => {
-        // 位置（インデックス）は固定、中身（uri）だけをシャッフル
-        const uris = prevImages.map(img => img.uri);
-
-        // Fisher-Yatesアルゴリズムでuriだけをシャッフル
-        for (let i = uris.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [uris[i], uris[j]] = [uris[j], uris[i]];
-        }
-
-        // 元の位置（ID）は保持したまま、uriだけを入れ替えた新しい配列を返す
-        return prevImages.map((img, index) => ({
-          ...img,
-          uri: uris[index],
-        }));
-      });
-    }, 3000); // 3秒ごと
-
-    return () => clearInterval(shuffleInterval);
-  }, [phase, settings.gameMode]);
-
   const handleMemorized = () => {
-    // シャッフル位置をクリア（回答フェーズでは動かさない）
-    setShufflePositions(new Map());
-
-    // 超級モードの場合、回答フェーズの画像をランダムに並び替え
-    if (settings.gameMode === GameMode.EXPERT) {
-      const shuffled = [...choiceImages];
-      // Fisher-Yatesアルゴリズムでシャッフル
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      setShuffledChoiceImages(shuffled);
-    } else {
-      setShuffledChoiceImages(choiceImages);
+    // 回答フェーズの画像をシャッフル
+    const shuffled = [...choiceImages];
+    // Fisher-Yatesアルゴリズムでシャッフル
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
+    setShuffledChoiceImages(shuffled);
 
-    // カウントダウンフェーズに遷移
-    setCountdown(3);
-    setPhase(GamePhase.COUNTDOWN_ANSWER);
+    // 超級モードの場合、計算フェーズに遷移
+    if (settings.gameMode === GameMode.EXPERT) {
+      setMathCorrectCount(0);
+      setMathAnswer('');
+      setMathFeedback(null);
+      setCurrentMathProblem(generateMathProblem());
+      setPhase(GamePhase.CALCULATION);
+    } else {
+      // その他のモードはカウントダウンフェーズに遷移
+      setCountdown(3);
+      setPhase(GamePhase.COUNTDOWN_ANSWER);
+    }
   };
 
   const handleImageSelect = (image: ImageData) => {
@@ -175,6 +153,45 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
       answerElapsedTime
     );
     navigation.navigate('Result', { result });
+  };
+
+  // 計算問題の回答を送信
+  const handleMathSubmit = () => {
+    if (!currentMathProblem || mathAnswer.trim() === '') return;
+
+    const userAnswerNum = parseInt(mathAnswer, 10);
+    const isCorrect = userAnswerNum === currentMathProblem.answer;
+
+    if (isCorrect) {
+      setMathFeedback('correct');
+      const newCorrectCount = mathCorrectCount + 1;
+      setMathCorrectCount(newCorrectCount);
+
+      // 必要数正解したら回答フェーズへ
+      if (newCorrectCount >= MATH_REQUIRED_CORRECT_COUNT) {
+        setTimeout(() => {
+          setPhase(GamePhase.ANSWER);
+          setAnswerStartTime(Date.now());
+        }, 500);
+      } else {
+        // 次の問題へ
+        setTimeout(() => {
+          setMathFeedback(null);
+          setMathAnswer('');
+          setCurrentMathProblem(generateMathProblem());
+          mathInputRef.current?.focus();
+        }, 500);
+      }
+    } else {
+      // 不正解の場合は新しい問題を生成
+      setMathFeedback('incorrect');
+      setTimeout(() => {
+        setMathFeedback(null);
+        setMathAnswer('');
+        setCurrentMathProblem(generateMathProblem());
+        mathInputRef.current?.focus();
+      }, 1000);
+    }
   };
 
   // ヒント機能
@@ -208,7 +225,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const displayImages = phase === GamePhase.MEMORIZE
-    ? (settings.gameMode === GameMode.EXPERT ? displayCorrectImages : correctImages)
+    ? correctImages
     : shuffledChoiceImages;
   const columns = getGridColumns(displayImages.length);
 
@@ -228,6 +245,67 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
     }
     return '';
   };
+
+  // 計算フェーズの表示（超級モード）
+  if (phase === GamePhase.CALCULATION && currentMathProblem) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.calculationContainer}>
+          <Text style={styles.calculationTitle}>計算問題</Text>
+          <Text style={styles.calculationProgress}>
+            正解数: {mathCorrectCount} / {MATH_REQUIRED_CORRECT_COUNT}
+          </Text>
+
+          <View style={styles.mathProblemCard}>
+            <Text style={styles.mathProblem}>
+              {currentMathProblem.num1} {currentMathProblem.operator} {currentMathProblem.num2} = ?
+            </Text>
+          </View>
+
+          <TextInput
+            ref={mathInputRef}
+            style={[
+              styles.mathInput,
+              mathFeedback === 'correct' && styles.mathInputCorrect,
+              mathFeedback === 'incorrect' && styles.mathInputIncorrect,
+            ]}
+            value={mathAnswer}
+            onChangeText={setMathAnswer}
+            keyboardType="numeric"
+            placeholder="答えを入力"
+            placeholderTextColor="#999"
+            autoFocus
+            onSubmitEditing={handleMathSubmit}
+            editable={mathFeedback === null}
+          />
+
+          {mathFeedback && (
+            <Text style={[
+              styles.mathFeedback,
+              mathFeedback === 'correct' ? styles.mathFeedbackCorrect : styles.mathFeedbackIncorrect
+            ]}>
+              {mathFeedback === 'correct' ? '正解！' : `不正解... 答えは ${currentMathProblem.answer}`}
+            </Text>
+          )}
+
+          <Button
+            mode="contained"
+            onPress={handleMathSubmit}
+            style={styles.mathSubmitButton}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            disabled={mathAnswer.trim() === '' || mathFeedback !== null}
+          >
+            回答する
+          </Button>
+
+          <Text style={styles.calculationHint}>
+            {MATH_REQUIRED_CORRECT_COUNT}問正解すると回答フェーズに進みます
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   // カウントダウン画面の表示
   if (phase === GamePhase.COUNTDOWN_MEMORIZE || phase === GamePhase.COUNTDOWN_ANSWER) {
@@ -525,6 +603,88 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     color: '#FF9800',
+  },
+  // 計算フェーズのスタイル
+  calculationContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 24,
+  },
+  calculationTitle: {
+    fontSize: 32,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#6200EE',
+    marginBottom: 16,
+  },
+  calculationProgress: {
+    fontSize: UI_CONFIG.IMPORTANT_FONT_SIZE,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 32,
+  },
+  mathProblemCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    marginBottom: 32,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    minWidth: 280,
+  },
+  mathProblem: {
+    fontSize: 48,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  mathInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#6200EE',
+    fontSize: 32,
+    textAlign: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    minWidth: 200,
+    marginBottom: 16,
+  },
+  mathInputCorrect: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#E8F5E9',
+  },
+  mathInputIncorrect: {
+    borderColor: '#F44336',
+    backgroundColor: '#FFEBEE',
+  },
+  mathFeedback: {
+    fontSize: UI_CONFIG.IMPORTANT_FONT_SIZE,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  mathFeedbackCorrect: {
+    color: '#4CAF50',
+  },
+  mathFeedbackIncorrect: {
+    color: '#F44336',
+  },
+  mathSubmitButton: {
+    borderRadius: 12,
+    marginTop: 8,
+    minWidth: 200,
+  },
+  calculationHint: {
+    fontSize: UI_CONFIG.MIN_FONT_SIZE,
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 32,
   },
 });
 

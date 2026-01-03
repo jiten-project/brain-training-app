@@ -69,7 +69,7 @@ export const GAME_MODE_CONFIG = {
   },
   [GameMode.EXPERT]: {
     name: '超級',
-    description: '上級 + パネルが動く',
+    description: '上級 + 計算問題',
     difficulty: '★★★★',
     getChoiceCount: (_correctCount: number, level: number) => {
       // 上級と同じ選択肢数
@@ -119,6 +119,11 @@ export const DEFAULT_SETTINGS = {
   gameMode: GameMode.BEGINNER,
   hintEnabled: true, // ヒントはデフォルトでON（高齢者向け）
 };
+
+/**
+ * 計算問題設定（超級モード用）
+ */
+export const MATH_REQUIRED_CORRECT_COUNT = 3; // 回答フェーズに進むために必要な正解数
 
 /**
  * 応援メッセージ
