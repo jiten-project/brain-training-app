@@ -117,6 +117,7 @@ export interface UserProgress {
   modeProgress: {
     [GameMode.BEGINNER]: ModeProgress;
     [GameMode.INTERMEDIATE]: ModeProgress;
+    [GameMode.ADVANCED]: ModeProgress;
     [GameMode.EXPERT]: ModeProgress;
   }; // 難易度ごとの進捗
   settings: UserSettings; // ユーザー設定

@@ -6,6 +6,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, GamePhase, ImageData, GameMode, MathProblem } from '../types';
 import { UI_CONFIG, formatTime, MATH_REQUIRED_CORRECT_COUNT } from '../utils/constants';
 import { generateCorrectImages, generateChoiceImages, evaluateGameResult, generateMathProblem } from '../utils/gameLogic';
+import { shuffleArray } from '../utils/shuffle';
 import { useGame } from '../contexts/GameContext';
 import ImageGridItem from '../components/ImageGridItem';
 
@@ -103,13 +104,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleMemorized = () => {
     // 回答フェーズの画像をシャッフル
-    const shuffled = [...choiceImages];
-    // Fisher-Yatesアルゴリズムでシャッフル
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    setShuffledChoiceImages(shuffled);
+    setShuffledChoiceImages(shuffleArray(choiceImages));
 
     // 超級モードの場合、計算フェーズに遷移
     if (settings.gameMode === GameMode.EXPERT) {
@@ -513,12 +508,6 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: UI_CONFIG.MIN_FONT_SIZE,
     fontWeight: 'bold',
-  },
-  hintButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
   },
   hintButton: {
     borderColor: '#FF9800',

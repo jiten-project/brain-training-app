@@ -6,6 +6,7 @@
 import { ImageData, GameMode, GameResult, SelectedResult, MathProblem } from '../types';
 import { getRandomImages } from './imageData';
 import { getImageCount, GAME_MODE_CONFIG, CLEAR_CONDITION } from './constants';
+import { shuffleArray } from './shuffle';
 
 /**
  * ゲーム用の正解画像をランダムに選択
@@ -44,20 +45,6 @@ export const generateChoiceImages = (
   // 正解画像とダミー画像を混ぜてシャッフル
   const allImages = [...correctImages, ...distractors];
   return shuffleArray(allImages);
-};
-
-/**
- * 配列をシャッフル (Fisher-Yatesアルゴリズム)
- * @param array シャッフルする配列
- * @returns シャッフルされた配列
- */
-const shuffleArray = <T>(array: T[]): T[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 };
 
 /**
@@ -123,19 +110,6 @@ export const isLevelCleared = (accuracy: number): boolean => {
 };
 
 /**
- * 次のレベルが利用可能か判定
- * @param currentLevel 現在のレベル
- * @param maxUnlockedLevel 最高到達レベル
- * @returns 次のレベルがプレイ可能かどうか
- */
-export const isNextLevelAvailable = (
-  currentLevel: number,
-  maxUnlockedLevel: number
-): boolean => {
-  return currentLevel < 20 && currentLevel < maxUnlockedLevel;
-};
-
-/**
  * 2桁の足し算・引き算の計算問題を生成
  * @returns 計算問題
  */
@@ -171,17 +145,4 @@ export const generateMathProblem = (): MathProblem => {
   }
 
   return { id, num1, num2, operator, answer };
-};
-
-/**
- * 計算問題を複数生成
- * @param count 生成する問題数
- * @returns 計算問題の配列
- */
-export const generateMathProblems = (count: number): MathProblem[] => {
-  const problems: MathProblem[] = [];
-  for (let i = 0; i < count; i++) {
-    problems.push(generateMathProblem());
-  }
-  return problems;
 };

@@ -5,7 +5,10 @@
       "Bash(npm install:*)",
       "Bash(npx playwright test:*)",
       "Bash(npx license-checker-rseidelsohn:*)",
-      "Bash(node scripts/generate-licenses.js:*)"
+      "Bash(node scripts/generate-licenses.js:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)"
     ]
   }
 }

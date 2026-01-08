@@ -178,29 +178,6 @@ export const clearAllData = async (): Promise<void> => {
 };
 
 /**
- * ストレージのデータサイズを取得 (デバッグ用)
- */
-export const getStorageInfo = async (): Promise<{ keys: string[]; size: number }> => {
-  try {
-    const allKeys = await AsyncStorage.getAllKeys();
-    const keys = [...allKeys]; // Convert readonly array to mutable array
-    let totalSize = 0;
-
-    for (const key of keys) {
-      const value = await AsyncStorage.getItem(key);
-      if (value) {
-        totalSize += value.length;
-      }
-    }
-
-    return { keys, size: totalSize };
-  } catch (error) {
-    console.error('Failed to get storage info:', error);
-    return { keys: [], size: 0 };
-  }
-};
-
-/**
  * プレイ履歴を読み込み
  * @returns プレイ履歴の配列 (存在しない場合は空配列)
  */

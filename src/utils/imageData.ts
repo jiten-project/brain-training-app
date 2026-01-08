@@ -5,6 +5,7 @@
  */
 
 import { ImageData } from '../types';
+import { shuffleArray } from './shuffle';
 
 /**
  * 日常の物の画像データ (50種類)
@@ -139,35 +140,12 @@ const plantImages: ImageData[] = [
 export const ALL_IMAGES: ImageData[] = [...dailyImages, ...animalImages, ...plantImages];
 
 /**
- * カテゴリ別画像データ
- */
-export const IMAGES_BY_CATEGORY = {
-  daily: dailyImages,
-  animal: animalImages,
-  plant: plantImages,
-};
-
-/**
  * IDから画像データを取得
  * @param id 画像ID
  * @returns 画像データ (見つからない場合はundefined)
  */
 export const getImageById = (id: string): ImageData | undefined => {
   return ALL_IMAGES.find(img => img.id === id);
-};
-
-/**
- * Fisher-Yatesアルゴリズムで配列をシャッフル
- * @param array シャッフルする配列
- * @returns シャッフルされた配列
- */
-const shuffleArray = <T>(array: T[]): T[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 };
 
 /**

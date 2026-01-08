@@ -247,57 +247,6 @@ const styles = StyleSheet.create({
     fontSize: UI_CONFIG.MIN_FONT_SIZE,
     fontWeight: 'bold',
   },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  loadingText: {
-    fontSize: UI_CONFIG.MIN_FONT_SIZE,
-    marginLeft: 12,
-    color: '#666',
-  },
-  purchasedContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  purchasedText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  purchasedSubText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-  },
-  purchaseDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  purchaseButton: {
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  purchaseButtonLabel: {
-    fontSize: UI_CONFIG.MIN_FONT_SIZE,
-    fontWeight: 'bold',
-  },
-  restoreButton: {
-    marginTop: 8,
-  },
-  restoreButtonLabel: {
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#F44336',
-    marginTop: 12,
-    textAlign: 'center',
-  },
 });
 
 export default SettingsScreen;

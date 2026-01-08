@@ -15,6 +15,7 @@ interface GameContextType {
   modeProgress: {
     [GameMode.BEGINNER]: ModeProgress;
     [GameMode.INTERMEDIATE]: ModeProgress;
+    [GameMode.ADVANCED]: ModeProgress;
     [GameMode.EXPERT]: ModeProgress;
   };
   currentStreak: number;
@@ -47,10 +48,12 @@ export const GameProvider: React.FC<Props> = ({ children }) => {
   const [modeProgress, setModeProgress] = useState<{
     [GameMode.BEGINNER]: ModeProgress;
     [GameMode.INTERMEDIATE]: ModeProgress;
+    [GameMode.ADVANCED]: ModeProgress;
     [GameMode.EXPERT]: ModeProgress;
   }>({
     [GameMode.BEGINNER]: { maxUnlockedLevel: 1, clearedLevels: [] },
     [GameMode.INTERMEDIATE]: { maxUnlockedLevel: 1, clearedLevels: [] },
+    [GameMode.ADVANCED]: { maxUnlockedLevel: 1, clearedLevels: [] },
     [GameMode.EXPERT]: { maxUnlockedLevel: 1, clearedLevels: [] },
   });
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -81,6 +84,7 @@ export const GameProvider: React.FC<Props> = ({ children }) => {
                 clearedLevels: progress.clearedLevels,
               },
               [GameMode.INTERMEDIATE]: { maxUnlockedLevel: 1, clearedLevels: [] },
+              [GameMode.ADVANCED]: { maxUnlockedLevel: 1, clearedLevels: [] },
               [GameMode.EXPERT]: { maxUnlockedLevel: 1, clearedLevels: [] },
             });
           }
@@ -179,9 +183,10 @@ export const GameProvider: React.FC<Props> = ({ children }) => {
       setLongestStreak(0);
 
       const resetModeProgress = {
-        [GameMode.BEGINNER]: { maxUnlockedLevel: 1, clearedLevels: [] },
-        [GameMode.INTERMEDIATE]: { maxUnlockedLevel: 1, clearedLevels: [] },
-        [GameMode.EXPERT]: { maxUnlockedLevel: 1, clearedLevels: [] },
+        [GameMode.BEGINNER]: { maxUnlockedLevel: 1, clearedLevels: [] as number[] },
+        [GameMode.INTERMEDIATE]: { maxUnlockedLevel: 1, clearedLevels: [] as number[] },
+        [GameMode.ADVANCED]: { maxUnlockedLevel: 1, clearedLevels: [] as number[] },
+        [GameMode.EXPERT]: { maxUnlockedLevel: 1, clearedLevels: [] as number[] },
       };
       setModeProgress(resetModeProgress);
 
