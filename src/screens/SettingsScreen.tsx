@@ -141,6 +141,16 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             >
               プライバシーポリシー
             </Button>
+
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Legal', { type: 'licenses' })}
+              style={[styles.legalButton, { marginTop: 12 }]}
+              labelStyle={styles.legalButtonLabel}
+              icon="license"
+            >
+              オープンソースライセンス
+            </Button>
           </Card.Content>
         </Card>
       </ScrollView>

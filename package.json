@@ -1,6 +1,9 @@
 {
   "name": "brain-training-app",
   "version": "1.0.0",
+  "description": "高齢者向け記憶力トレーニングアプリ",
+  "author": "jiten-project <support@jiten-project.com>",
+  "license": "MIT",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -35,6 +38,7 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
+    "license-checker-rseidelsohn": "^4.4.2",
     "prettier": "^3.7.4",
     "typescript": "~5.9.2"
   },

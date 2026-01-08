@@ -165,5 +165,5 @@ export type RootStackParamList = {
   Settings: undefined;
   History: undefined;
   Achievements: undefined;
-  Legal: { type: 'terms' | 'privacy' };
+  Legal: { type: 'terms' | 'privacy' | 'licenses' };
 };

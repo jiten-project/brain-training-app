@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Card, Button } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, FlatList, Linking } from 'react-native';
+import { Text, Card, Button, List, Divider } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
 import { UI_CONFIG } from '../utils/constants';
+import licensesData from '../data/licenses.json';
 
 type LegalScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Legal'>;
 type LegalScreenRouteProp = RouteProp<RootStackParamList, 'Legal'>;
@@ -14,9 +15,77 @@ interface Props {
   route: LegalScreenRouteProp;
 }
 
+interface LicensePackage {
+  name: string;
+  version: string;
+  license: string;
+  repository: string;
+}
+
 const LegalScreen: React.FC<Props> = ({ navigation, route }) => {
   const { type } = route.params;
   const isTerms = type === 'terms';
+  const isLicenses = type === 'licenses';
+
+  const openRepository = (url: string) => {
+    if (url) {
+      Linking.openURL(url);
+    }
+  };
+
+  const renderLicenseItem = ({ item }: { item: LicensePackage }) => (
+    <List.Item
+      title={item.name}
+      description={`${item.version} - ${item.license}`}
+      titleStyle={styles.licenseItemTitle}
+      descriptionStyle={styles.licenseItemDescription}
+      onPress={() => openRepository(item.repository)}
+      right={item.repository ? () => <List.Icon icon="open-in-new" /> : undefined}
+    />
+  );
+
+  // OSSライセンス一覧の表示
+  if (isLicenses) {
+    return (
+      <View style={styles.container}>
+        <Card style={styles.licenseHeader}>
+          <Card.Content>
+            <Text style={styles.title}>オープンソースライセンス</Text>
+            <Text style={styles.licenseSubtitle}>
+              このアプリは以下の{licensesData.totalPackages}個のオープンソースソフトウェアを使用しています。
+            </Text>
+            <Divider style={styles.licenseDivider} />
+            <Text style={styles.licenseSummaryTitle}>ライセンス内訳</Text>
+            {licensesData.summary.slice(0, 5).map((item) => (
+              <Text key={item.license} style={styles.licenseSummaryItem}>
+                {item.license}: {item.count}件
+              </Text>
+            ))}
+          </Card.Content>
+        </Card>
+
+        <FlatList
+          data={licensesData.packages as LicensePackage[]}
+          renderItem={renderLicenseItem}
+          keyExtractor={(item) => `${item.name}@${item.version}`}
+          ItemSeparatorComponent={() => <Divider />}
+          contentContainerStyle={styles.licenseList}
+        />
+
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="contained"
+            onPress={() => navigation.goBack()}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+          >
+            戻る
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -274,6 +343,43 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: UI_CONFIG.MIN_FONT_SIZE,
     fontWeight: 'bold',
+  },
+  // OSSライセンス用スタイル
+  licenseHeader: {
+    margin: 12,
+    elevation: 4,
+  },
+  licenseSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  licenseDivider: {
+    marginVertical: 12,
+  },
+  licenseSummaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
+  licenseSummaryItem: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+  },
+  licenseList: {
+    paddingHorizontal: 12,
+    paddingBottom: 80,
+  },
+  licenseItemTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  licenseItemDescription: {
+    fontSize: 12,
+    color: '#888',
   },
 });
 
