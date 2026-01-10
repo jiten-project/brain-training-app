@@ -8,7 +8,14 @@
       "Bash(node scripts/generate-licenses.js:*)",
       "Bash(wc:*)",
       "Bash(ls:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh repo list:*)",
+      "Bash(gh auth logout:*)",
+      "Bash(gh auth login -h github.com -p https -w)",
+      "Bash(gh repo edit:*)"
     ]
   }
 }
