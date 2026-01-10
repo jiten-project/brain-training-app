@@ -14,9 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.braintrainingapp",
+      "bundleIdentifier": "com.jiten0410.braintrainingapp",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,6 +36,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cd169171-03b5-4423-99b5-a80dc56d725c"
+      }
     }
   }
 }
