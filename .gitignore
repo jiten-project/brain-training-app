@@ -9,14 +9,21 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native (generated)
+/ios/
+/android/
 .kotlin/
+
+# Credentials & Certificates
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.pem
+*.cer
+*.certSigningRequest
 
 # Metro
 .metro-health-check*
@@ -28,17 +35,50 @@ yarn-error.*
 
 # macOS
 .DS_Store
-*.pem
+*.swp
+*~
 
 # local env files
+.env
+.env.*
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# IDE
+.idea/
+.vscode/
+*.sublime-*
 
-# e2e
-/e2e
+# testing
+coverage/
+.nyc_output/
+
+# App Store screenshots (keep in separate folder if needed)
+noutore*.png
+*-ipad*.png
+debug-screenshot.png
+
+# Claude Code
+.claude/
+
+# Serena
+.serena/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+*.ipa
+*.apk
+*.aab
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# EAS
+.eas/
