@@ -5,7 +5,7 @@
 
 import { ImageData, GameMode, GameResult, SelectedResult, MathProblem } from '../types';
 import { getRandomImages } from './imageData';
-import { getImageCount, GAME_MODE_CONFIG, CLEAR_CONDITION } from './constants';
+import { getImageCount, GAME_MODE_CONFIG, CLEAR_CONDITION, generateId } from './constants';
 import { shuffleArray } from './shuffle';
 
 /**
@@ -114,7 +114,7 @@ export const isLevelCleared = (accuracy: number): boolean => {
  * @returns 計算問題
  */
 export const generateMathProblem = (): MathProblem => {
-  const id = `math_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const id = generateId('math');
   const operator = Math.random() < 0.5 ? '+' : '-';
 
   let num1: number;

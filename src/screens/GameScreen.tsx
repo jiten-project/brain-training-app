@@ -4,7 +4,7 @@ import { Text, Button, Card } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, GamePhase, ImageData, GameMode, MathProblem } from '../types';
-import { UI_CONFIG, formatTime, MATH_REQUIRED_CORRECT_COUNT } from '../utils/constants';
+import { UI_CONFIG, formatTime, MATH_REQUIRED_CORRECT_COUNT, getGridColumns } from '../utils/constants';
 import { generateCorrectImages, generateChoiceImages, evaluateGameResult, generateMathProblem } from '../utils/gameLogic';
 import { shuffleArray } from '../utils/shuffle';
 import { useGame } from '../contexts/GameContext';
@@ -86,7 +86,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
 
     const interval = setInterval(() => {
       setMemorizeElapsedTime(Date.now() - memorizeStartTime);
-    }, 10); // 10msごとに更新
+    }, 100); // 100msごとに更新（パフォーマンス最適化）
 
     return () => clearInterval(interval);
   }, [phase, memorizeStartTime]);
@@ -97,7 +97,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
 
     const interval = setInterval(() => {
       setAnswerElapsedTime(Date.now() - answerStartTime);
-    }, 10); // 10msごとに更新
+    }, 100); // 100msごとに更新（パフォーマンス最適化）
 
     return () => clearInterval(interval);
   }, [phase, answerStartTime]);
@@ -212,11 +212,6 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const isImageSelected = (imageId: string) => {
     return selectedImages.some(img => img.id === imageId);
-  };
-
-  const getGridColumns = (count: number) => {
-    if (count <= 4) return 2;
-    return 6;
   };
 
   const displayImages = phase === GamePhase.MEMORIZE

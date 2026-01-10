@@ -183,3 +183,39 @@ export const formatTime = (ms: number): string => {
   const milliseconds = Math.floor((ms % 1000) / 10); // 10ms単位
   return `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
 };
+
+/**
+ * 日付を「YYYY/MM/DD HH:mm」形式にフォーマット
+ * @param dateString ISO日付文字列
+ * @returns フォーマットされた日付文字列
+ */
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}/${month}/${day} ${hours}:${minutes}`;
+};
+
+/**
+ * グリッドの列数を決定
+ * @param count 画像数
+ * @returns 列数
+ */
+export const getGridColumns = (count: number): number => {
+  if (count <= 4) return 2;
+  return 6;
+};
+
+/**
+ * ユニークIDを生成
+ * @param prefix プレフィックス
+ * @returns ユニークID
+ */
+export const generateId = (prefix: string = ''): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 11);
+  return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
+};

@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, FlatList, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
 import { Text, Card, Button, Divider, Portal, Dialog, Paragraph, IconButton } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, PlayHistory, GameMode } from '../types';
 import { useGame } from '../contexts/GameContext';
-import { UI_CONFIG, GAME_MODE_CONFIG, LEVELS, formatTime } from '../utils/constants';
+import { UI_CONFIG, GAME_MODE_CONFIG, LEVELS, formatTime, formatDate } from '../utils/constants';
 
 type HistoryScreenNavigationProp = StackNavigationProp<RootStackParamList, 'History'>;
 
@@ -17,17 +17,6 @@ const HistoryScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [selectedMode, setSelectedMode] = useState<string>('');
   const [infoDialogVisible, setInfoDialogVisible] = useState(false);
-
-  // 日時をフォーマット
-  const formatDate = (isoString: string): string => {
-    const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}/${month}/${day} ${hours}:${minutes}`;
-  };
 
   // 初期選択値を設定
   React.useEffect(() => {
