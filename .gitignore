@@ -74,6 +74,7 @@ logs/
 *.ipa
 *.apk
 *.aab
+credentials.json
 
 # Temporary files
 tmp/
