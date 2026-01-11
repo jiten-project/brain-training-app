@@ -20,7 +20,7 @@ interface Props {
 const ResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { result } = route.params;
   const { level, totalCount, correctCount, accuracy, isCleared, selectedResults, choiceImages, correctImages, memorizeTime, answerTime } = result;
-  const { updateProgress, addHistory, settings, playHistory, clearedLevels } = useGame();
+  const { updateProgress, addHistory, settings, playHistory, clearedLevels, isLoading } = useGame();
 
   const encouragementMessage = getEncouragementMessage(accuracy);
 
@@ -41,12 +41,12 @@ const ResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const previousBestPerfect = perfectRecords.length > 0 ? perfectRecords[0] : null;
   const previousBestTime = previousBestPerfect ? previousBestPerfect.memorizeTime + previousBestPerfect.answerTime : null;
 
-  // パーフェクト最短記録かどうか - 初回判定結果を保持
+  // パーフェクト最短記録かどうか - 履歴読み込み完了後に判定を固定
   const isNewPerfectRecordRef = useRef<boolean | null>(null);
-  if (isNewPerfectRecordRef.current === null) {
+  if (isNewPerfectRecordRef.current === null && !isLoading) {
     isNewPerfectRecordRef.current = isPerfectGame && (!previousBestTime || totalTime < previousBestTime);
   }
-  const isNewPerfectRecord = isNewPerfectRecordRef.current;
+  const isNewPerfectRecord = isNewPerfectRecordRef.current ?? false;
 
   // 同レベル・同難易度のクリア済み記録から最高記録を取得
   const clearedRecords = playHistory.filter(h =>
@@ -68,16 +68,16 @@ const ResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const bestRecord = bestRecordsWithSameAccuracy.length > 0 ? bestRecordsWithSameAccuracy[0] : null;
   const bestTime = bestRecord ? bestRecord.memorizeTime + bestRecord.answerTime : null;
 
-  // 今回が最高記録かどうか（クリア時のみ更新）- 初回判定結果を保持
+  // 今回が最高記録かどうか（クリア時のみ更新）- 履歴読み込み完了後に判定を固定
   const isNewBestRecordRef = useRef<boolean | null>(null);
-  if (isNewBestRecordRef.current === null) {
+  if (isNewBestRecordRef.current === null && !isLoading) {
     isNewBestRecordRef.current = isCleared && (
       clearedRecords.length === 0 ||
       accuracy > bestAccuracy ||
       (accuracy === bestAccuracy && totalTime < (bestTime || Infinity))
     );
   }
-  const isNewBestRecord = isNewBestRecordRef.current;
+  const isNewBestRecord = isNewBestRecordRef.current ?? false;
 
   // このレベルを過去にクリアしたことがあるか
   const hasBeenCleared = clearedLevels.includes(level);
