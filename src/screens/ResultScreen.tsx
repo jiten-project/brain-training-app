@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Card } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -91,41 +91,47 @@ const ResultScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const columns = getGridColumns(choiceImages.length);
 
-  // 進捗を保存 & 効果音再生 & 履歴を保存
-  useEffect(() => {
-    const saveProgress = async () => {
-      await updateProgress(level, isCleared, settings.gameMode);
+  // 保存処理が実行されたかどうかを追跡
+  const hasSavedRef = useRef(false);
 
-      // プレイ履歴を保存
-      const historyRecord: PlayHistory = {
-        id: generateId(),
-        date: new Date().toISOString(),
-        level,
-        totalCount,
-        correctCount,
-        accuracy,
-        isCleared,
-        memorizeTime,
-        answerTime,
-        gameMode: settings.gameMode,
-      };
-      await addHistory(historyRecord);
+  // 進捗保存関数（useCallbackでメモ化）
+  const saveProgressAndHistory = useCallback(async () => {
+    if (hasSavedRef.current) return;
+    hasSavedRef.current = true;
+
+    await updateProgress(level, isCleared, settings.gameMode);
+
+    const historyRecord: PlayHistory = {
+      id: generateId(),
+      date: new Date().toISOString(),
+      level,
+      totalCount,
+      correctCount,
+      accuracy,
+      isCleared,
+      memorizeTime,
+      answerTime,
+      gameMode: settings.gameMode,
     };
-    saveProgress();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, isCleared, accuracy]);
+    await addHistory(historyRecord);
+  }, [level, isCleared, settings.gameMode, updateProgress, addHistory, totalCount, correctCount, accuracy, memorizeTime, answerTime]);
 
-  const handleNextLevel = () => {
+  // 進捗を保存 & 履歴を保存（マウント時に一度だけ実行）
+  useEffect(() => {
+    saveProgressAndHistory();
+  }, [saveProgressAndHistory]);
+
+  const handleNextLevel = useCallback(() => {
     navigation.navigate('Game', { level: level + 1 });
-  };
+  }, [navigation, level]);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     navigation.navigate('Game', { level });
-  };
+  }, [navigation, level]);
 
-  const handleBackToHome = () => {
+  const handleBackToHome = useCallback(() => {
     navigation.navigate('Home');
-  };
+  }, [navigation]);
 
   return (
     <View style={styles.container}>

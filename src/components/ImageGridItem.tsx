@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
 import { Text, Surface } from 'react-native-paper';
 import { ImageData } from '../types';
+import { TIMING } from '../utils/constants';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -39,7 +40,7 @@ const ImageGridItem: React.FC<Props> = React.memo(({
   useEffect(() => {
     Animated.timing(opacityAnim, {
       toValue: 1,
-      duration: 200,
+      duration: TIMING.ANIMATION_PRESS,
       useNativeDriver: true,
     }).start();
   }, [opacityAnim]);
@@ -60,12 +61,12 @@ const ImageGridItem: React.FC<Props> = React.memo(({
       Animated.parallel([
         Animated.timing(translateXAnim, {
           toValue: shufflePosition.x,
-          duration: 500,
+          duration: TIMING.ANIMATION_SELECT,
           useNativeDriver: true,
         }),
         Animated.timing(translateYAnim, {
           toValue: shufflePosition.y,
-          duration: 500,
+          duration: TIMING.ANIMATION_SELECT,
           useNativeDriver: true,
         }),
       ]).start();
@@ -102,6 +103,19 @@ const ImageGridItem: React.FC<Props> = React.memo(({
     return null;
   };
 
+  // アクセシビリティラベルを生成
+  const getAccessibilityLabel = () => {
+    const baseName = image.name || '画像';
+    if (resultMode) {
+      if (wasSelected && isCorrect) return `${baseName}、正解`;
+      if (wasSelected && !isCorrect) return `${baseName}、不正解`;
+      if (!wasSelected && isCorrect) return `${baseName}、見逃し`;
+      return baseName;
+    }
+    if (selected) return `${baseName}、選択中`;
+    return baseName;
+  };
+
   return (
     <Animated.View
       style={{
@@ -117,6 +131,9 @@ const ImageGridItem: React.FC<Props> = React.memo(({
         onPress={selectable ? onPress : undefined}
         disabled={!selectable}
         activeOpacity={selectable ? 0.7 : 1}
+        accessibilityLabel={getAccessibilityLabel()}
+        accessibilityRole="button"
+        accessibilityState={{ selected, disabled: !selectable }}
       >
         <Surface
           style={[
