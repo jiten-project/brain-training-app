@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Text, Card, RadioButton, Switch, Button, Divider } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,16 +24,16 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     setHintEnabled(settings.hintEnabled);
   }, [settings]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       await updateSettings({ gameMode, hintEnabled });
       navigation.goBack();
-    } catch (error) {
+    } catch {
       Alert.alert('エラー', '設定の保存に失敗しました。もう一度お試しください。');
     }
-  };
+  }, [updateSettings, gameMode, hintEnabled, navigation]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     Alert.alert(
       'データリセット',
       '全ての進捗データがリセットされます。\nよろしいですか？',
@@ -46,14 +46,14 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             try {
               await resetProgress();
               Alert.alert('完了', 'データをリセットしました');
-            } catch (error) {
+            } catch {
               Alert.alert('エラー', 'データのリセットに失敗しました。もう一度お試しください。');
             }
           },
         },
       ]
     );
-  };
+  }, [resetProgress]);
 
   return (
     <View style={styles.container}>

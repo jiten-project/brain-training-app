@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Button, Title, Card, Chip, Portal, Dialog, Paragraph } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -25,28 +25,28 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const maxDisplayLevel = Math.min(maxUnlockedLevel + 1, LEVELS.MAX);
   const levels = Array.from({ length: maxDisplayLevel }, (_, i) => i + 1);
 
-  const handleLevelPress = (level: number) => {
+  const handleLevelPress = useCallback((level: number) => {
     navigation.navigate('Game', { level });
-  };
+  }, [navigation]);
 
-  const handleSettingsPress = () => {
+  const handleSettingsPress = useCallback(() => {
     navigation.navigate('Settings');
-  };
+  }, [navigation]);
 
-  const handleHistoryPress = () => {
+  const handleHistoryPress = useCallback(() => {
     navigation.navigate('History');
-  };
+  }, [navigation]);
 
-  const handleHowToPlayPress = () => {
+  const handleHowToPlayPress = useCallback(() => {
     setHowToPlayVisible(true);
-  };
+  }, []);
 
-  const hideHowToPlayDialog = () => {
+  const hideHowToPlayDialog = useCallback(() => {
     setHowToPlayVisible(false);
-  };
+  }, []);
 
-  const isLevelUnlocked = (level: number) => level <= maxUnlockedLevel;
-  const isLevelCleared = (level: number) => clearedLevels.includes(level);
+  const isLevelUnlocked = useCallback((level: number) => level <= maxUnlockedLevel, [maxUnlockedLevel]);
+  const isLevelCleared = useCallback((level: number) => clearedLevels.includes(level), [clearedLevels]);
 
   return (
     <View style={styles.container}>
@@ -80,16 +80,18 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 ]}
                 contentStyle={styles.levelButtonContent}
                 labelStyle={styles.levelButtonLabel}
+                accessibilityLabel={`レベル${level}${cleared ? '、クリア済み' : ''}${!unlocked ? '、ロック中' : ''}`}
+                accessibilityHint={unlocked ? 'タップしてゲームを開始' : 'このレベルはまだロックされています'}
               >
                 レベル {level}
               </Button>
               {cleared && (
-                <Chip icon="check" style={styles.clearedChip} textStyle={styles.clearedChipText}>
+                <Chip icon="check" style={styles.clearedChip} textStyle={styles.clearedChipText} accessibilityLabel="">
                   クリア
                 </Chip>
               )}
               {!unlocked && (
-                <Chip icon="lock" style={styles.lockedChip} textStyle={styles.lockedChipText}>
+                <Chip icon="lock" style={styles.lockedChip} textStyle={styles.lockedChipText} accessibilityLabel="">
                   ロック
                 </Chip>
               )}
