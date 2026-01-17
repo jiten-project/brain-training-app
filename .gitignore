@@ -10,11 +10,15 @@ web-build/
 expo-env.d.ts
 
 # Native (generated)
-/ios/
-/android/
+ios/
+android/
 .kotlin/
 
 # Credentials & Certificates
+credentials/
+credentials.json
+google-services.json
+GoogleService-Info.plist
 *.orig.*
 *.jks
 *.p8
@@ -23,7 +27,21 @@ expo-env.d.ts
 *.mobileprovision
 *.pem
 *.cer
+*.crt
+*.der
+*.pfx
 *.certSigningRequest
+
+# Secrets & API Keys
+secrets/
+*.secret
+*.secrets
+*-secret.json
+*-secrets.json
+api-key*
+apikey*
+.npmrc
+.yarnrc
 
 # Metro
 .metro-health-check*
@@ -37,11 +55,17 @@ yarn-error.*
 .DS_Store
 *.swp
 *~
+.AppleDouble
+.LSOverride
+._*
 
 # local env files
 .env
 .env.*
 .env*.local
+*.env
+.envrc
+.direnv/
 
 # typescript
 *.tsbuildinfo
@@ -50,6 +74,7 @@ yarn-error.*
 .idea/
 .vscode/
 *.sublime-*
+*.code-workspace
 
 # testing
 coverage/
@@ -74,12 +99,61 @@ logs/
 *.ipa
 *.apk
 *.aab
-credentials.json
+build/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+*.bak
+*.backup
 
 # EAS
 .eas/
+eas.json.local
+
+# Firebase / Google Cloud
+firebase-debug.log
+.firebase/
+firebaserc.local
+
+# AWS
+.aws/
+aws-exports.js
+
+# SSH & Auth
+*.ppk
+id_rsa*
+id_ed25519*
+known_hosts
+
+# Watchman
+.watchmanconfig
+
+# Jest
+jest.config.js.bak
+
+# Package manager locks (keep only one)
+# yarn.lock
+# pnpm-lock.yaml
+
+# Database & Cache
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+redis-data/
+
+# Session & Token files
+*.session
+*.token
+.tokens/
+
+# Sensitive data patterns
+*password*
+*PASSWORD*
+*credential*
+*CREDENTIAL*
+!**/test*password*
+!**/test*credential*

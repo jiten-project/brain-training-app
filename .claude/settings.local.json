@@ -21,7 +21,9 @@
       "Bash(do)",
       "Bash(echo:*)",
       "Bash(sips:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npx @anthropic/codex-mcp:*)",
+      "mcp__serena__write_memory"
     ]
   }
 }

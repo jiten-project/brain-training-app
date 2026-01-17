@@ -20,7 +20,8 @@ interface Props {
 const ResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { result } = route.params;
   const { level, totalCount, correctCount, accuracy, isCleared, selectedResults, choiceImages, correctImages, memorizeTime, answerTime } = result;
-  const { updateProgress, addHistory, settings, playHistory, clearedLevels, isLoading } = useGame();
+  const { updateProgress, addHistory, settings, playHistory, modeProgress, isLoading } = useGame();
+  const clearedLevels = modeProgress[settings.gameMode].clearedLevels;
 
   const encouragementMessage = getEncouragementMessage(accuracy);
 

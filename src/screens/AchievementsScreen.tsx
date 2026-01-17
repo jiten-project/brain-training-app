@@ -14,7 +14,8 @@ interface Props {
 }
 
 const AchievementsScreen: React.FC<Props> = ({ navigation }) => {
-  const { playHistory, clearedLevels, currentStreak } = useGame();
+  const { playHistory, modeProgress, currentStreak, settings } = useGame();
+  const clearedLevels = modeProgress[settings.gameMode].clearedLevels;
 
   // 実績を計算
   const achievements = useMemo(() => {
