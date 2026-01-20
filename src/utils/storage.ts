@@ -5,7 +5,14 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProgress, UserSettings, PlayHistory } from '../types';
-import { STORAGE_KEYS, DEFAULT_SETTINGS, LEVELS } from './constants';
+import { STORAGE_KEYS, DEFAULT_SETTINGS, LEVELS, ACCURACY_THRESHOLDS } from './constants';
+import { handleStorageError } from './logger';
+import {
+  validateUserProgress,
+  validateUserSettings,
+  validatePlayHistoryArray,
+  safeJsonParse,
+} from './validation';
 
 /**
  * 今日の日付をYYYY-MM-DD形式で取得
@@ -32,31 +39,23 @@ const getDaysDifference = (date1: string, date2: string): number => {
 export const loadUserProgress = async (): Promise<UserProgress | null> => {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROGRESS);
-    if (data) {
-      const progress: UserProgress = JSON.parse(data);
+    if (!data) return null;
 
-      // データのバリデーション
-      // maxUnlockedLevelを1-20の範囲にクランプ
-      progress.maxUnlockedLevel = Math.max(
-        LEVELS.MIN,
-        Math.min(LEVELS.MAX, progress.maxUnlockedLevel || LEVELS.MIN)
-      );
-
-      // clearedLevelsを1-20の範囲でフィルタリング
-      progress.clearedLevels = (progress.clearedLevels || []).filter(
-        level => level >= LEVELS.MIN && level <= LEVELS.MAX
-      );
-
-      // ストリーク関連のデフォルト値設定（後方互換性）
-      progress.currentStreak = progress.currentStreak || 0;
-      progress.lastPlayedDate = progress.lastPlayedDate || '';
-      progress.longestStreak = progress.longestStreak || 0;
-
-      return progress;
+    const parsed = safeJsonParse(data);
+    if (parsed === null) {
+      handleStorageError('loadUserProgress', 'JSONパースエラー');
+      return null;
     }
-    return null;
+
+    const progress = validateUserProgress(parsed);
+    if (progress === null) {
+      handleStorageError('loadUserProgress', 'バリデーションエラー');
+      return null;
+    }
+
+    return progress;
   } catch (error) {
-    console.error('Failed to load user progress:', error);
+    handleStorageError('loadUserProgress', error);
     return null;
   }
 };
@@ -130,7 +129,7 @@ export const saveUserProgress = async (progress: UserProgress): Promise<void> =>
 
     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(validatedProgress));
   } catch (error) {
-    console.error('Failed to save user progress:', error);
+    handleStorageError('saveUserProgress', error);
     throw error;
   }
 };
@@ -142,12 +141,18 @@ export const saveUserProgress = async (progress: UserProgress): Promise<void> =>
 export const loadUserSettings = async (): Promise<UserSettings> => {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_SETTINGS);
-    if (data) {
-      return JSON.parse(data);
+    if (!data) return DEFAULT_SETTINGS;
+
+    const parsed = safeJsonParse(data);
+    if (parsed === null) {
+      handleStorageError('loadUserSettings', 'JSONパースエラー');
+      return DEFAULT_SETTINGS;
     }
-    return DEFAULT_SETTINGS;
+
+    const settings = validateUserSettings(parsed);
+    return settings || DEFAULT_SETTINGS;
   } catch (error) {
-    console.error('Failed to load user settings:', error);
+    handleStorageError('loadUserSettings', error);
     return DEFAULT_SETTINGS;
   }
 };
@@ -160,7 +165,7 @@ export const saveUserSettings = async (settings: UserSettings): Promise<void> =>
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(settings));
   } catch (error) {
-    console.error('Failed to save user settings:', error);
+    handleStorageError('saveUserSettings', error);
     throw error;
   }
 };
@@ -172,7 +177,7 @@ export const clearAllData = async (): Promise<void> => {
   try {
     await AsyncStorage.multiRemove([STORAGE_KEYS.USER_PROGRESS, STORAGE_KEYS.USER_SETTINGS]);
   } catch (error) {
-    console.error('Failed to clear all data:', error);
+    handleStorageError('clearAllData', error);
     throw error;
   }
 };
@@ -184,14 +189,19 @@ export const clearAllData = async (): Promise<void> => {
 export const loadPlayHistory = async (): Promise<PlayHistory[]> => {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.PLAY_HISTORY);
-    if (data) {
-      const history: PlayHistory[] = JSON.parse(data);
-      // 日付の新しい順にソート
-      return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (!data) return [];
+
+    const parsed = safeJsonParse(data);
+    if (parsed === null) {
+      handleStorageError('loadPlayHistory', 'JSONパースエラー');
+      return [];
     }
-    return [];
+
+    const history = validatePlayHistoryArray(parsed);
+    // 日付の新しい順にソート
+    return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
-    console.error('Failed to load play history:', error);
+    handleStorageError('loadPlayHistory', error);
     return [];
   }
 };
@@ -204,9 +214,81 @@ export const savePlayHistory = async (history: PlayHistory[]): Promise<void> => 
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.PLAY_HISTORY, JSON.stringify(history));
   } catch (error) {
-    console.error('Failed to save play history:', error);
+    handleStorageError('savePlayHistory', error);
     throw error;
   }
+};
+
+// --- プレイ履歴管理のヘルパー関数 ---
+
+/**
+ * 同レベル・同難易度の記録を抽出
+ */
+const filterRecordsByLevelAndMode = (
+  history: PlayHistory[],
+  level: number,
+  gameMode: PlayHistory['gameMode']
+): { sameLevelModeRecords: PlayHistory[]; otherRecords: PlayHistory[] } => {
+  const sameLevelModeRecords = history.filter(
+    h => h.level === level && h.gameMode === gameMode
+  );
+  const otherRecords = history.filter(
+    h => h.level !== level || h.gameMode !== gameMode
+  );
+  return { sameLevelModeRecords, otherRecords };
+};
+
+/**
+ * 最高記録を判定し、フラグを更新
+ */
+const updateBestRecordFlag = (
+  records: PlayHistory[],
+  newRecord: PlayHistory
+): { updatedRecords: PlayHistory[]; newIsBestRecord: boolean } => {
+  // パーフェクトでない場合は最高記録にならない
+  if (newRecord.accuracy !== ACCURACY_THRESHOLDS.PERFECT) {
+    return { updatedRecords: records, newIsBestRecord: false };
+  }
+
+  const totalTime = newRecord.memorizeTime + newRecord.answerTime;
+
+  // 既存の最高記録を探す（同レベル・同難易度のパーフェクト記録）
+  const currentBestRecordIndex = records.findIndex(
+    r => r.isBestRecord && r.accuracy === ACCURACY_THRESHOLDS.PERFECT
+  );
+
+  if (currentBestRecordIndex !== -1) {
+    const currentBestRecord = records[currentBestRecordIndex];
+    const currentBestTotalTime = currentBestRecord.memorizeTime + currentBestRecord.answerTime;
+
+    if (totalTime < currentBestTotalTime) {
+      // 新記録！既存の最高記録フラグを解除（イミュータブルに更新）
+      const updatedRecords = [...records];
+      updatedRecords[currentBestRecordIndex] = {
+        ...currentBestRecord,
+        isBestRecord: false,
+      };
+      return { updatedRecords, newIsBestRecord: true };
+    }
+    return { updatedRecords: records, newIsBestRecord: false };
+  }
+
+  // 初のパーフェクト記録
+  return { updatedRecords: records, newIsBestRecord: true };
+};
+
+/**
+ * 記録を整理（最高記録を保持しつつ、通常記録を制限）
+ */
+const organizeRecords = (records: PlayHistory[], maxRegularRecords: number = 100): PlayHistory[] => {
+  const bestRecord = records.find(r => r.isBestRecord);
+  const regularRecords = records.filter(r => !r.isBestRecord);
+
+  // 最高記録以外の記録を最新N個に制限
+  const trimmedRegularRecords = regularRecords.slice(0, maxRegularRecords);
+
+  // 最高記録がある場合は先頭に配置、その後に通常記録
+  return bestRecord ? [bestRecord, ...trimmedRegularRecords] : trimmedRegularRecords;
 };
 
 /**
@@ -217,43 +299,13 @@ export const savePlayHistory = async (history: PlayHistory[]): Promise<void> => 
 export const addPlayHistory = async (newRecord: PlayHistory): Promise<void> => {
   try {
     const history = await loadPlayHistory();
-    const level = newRecord.level;
-    const gameMode = newRecord.gameMode;
+    const { level, gameMode } = newRecord;
 
     // 同レベル・同難易度の記録を抽出
-    const sameLevelModeRecords = history.filter(
-      h => h.level === level && h.gameMode === gameMode
-    );
-    const otherRecords = history.filter(
-      h => h.level !== level || h.gameMode !== gameMode
-    );
+    const { sameLevelModeRecords, otherRecords } = filterRecordsByLevelAndMode(history, level, gameMode);
 
-    // 最高記録を判定（パーフェクト達成の最短時間）
-    let newIsBestRecord = false;
-    if (newRecord.accuracy === 100) {
-      const totalTime = newRecord.memorizeTime + newRecord.answerTime;
-
-      // 既存の最高記録を探す（同レベル・同難易度のみ）
-      const currentBestRecordIndex = sameLevelModeRecords.findIndex(
-        r => r.isBestRecord && r.accuracy === 100
-      );
-
-      if (currentBestRecordIndex !== -1) {
-        const currentBestRecord = sameLevelModeRecords[currentBestRecordIndex];
-        const currentBestTotalTime = currentBestRecord.memorizeTime + currentBestRecord.answerTime;
-        if (totalTime < currentBestTotalTime) {
-          // 新記録！既存の最高記録フラグを解除（イミュータブルに更新）
-          sameLevelModeRecords[currentBestRecordIndex] = {
-            ...currentBestRecord,
-            isBestRecord: false,
-          };
-          newIsBestRecord = true;
-        }
-      } else {
-        // 初のパーフェクト記録
-        newIsBestRecord = true;
-      }
-    }
+    // 最高記録を判定
+    const { updatedRecords, newIsBestRecord } = updateBestRecordFlag(sameLevelModeRecords, newRecord);
 
     // 新しい記録に最高記録フラグを設定（イミュータブルに）
     const recordToAdd: PlayHistory = {
@@ -262,26 +314,17 @@ export const addPlayHistory = async (newRecord: PlayHistory): Promise<void> => {
     };
 
     // 新しい記録を追加
-    sameLevelModeRecords.unshift(recordToAdd);
+    const recordsWithNew = [recordToAdd, ...updatedRecords];
 
-    // レベル・難易度ごとの記録を整理
-    const bestRecord = sameLevelModeRecords.find(r => r.isBestRecord);
-    const regularRecords = sameLevelModeRecords.filter(r => !r.isBestRecord);
-
-    // 最高記録以外の記録を最新100個に制限
-    const trimmedRegularRecords = regularRecords.slice(0, 100);
-
-    // 最高記録がある場合は先頭に配置、その後に通常記録
-    const finalSameLevelModeRecords = bestRecord
-      ? [bestRecord, ...trimmedRegularRecords]
-      : trimmedRegularRecords;
+    // 記録を整理
+    const organizedRecords = organizeRecords(recordsWithNew);
 
     // 全記録を結合
-    const finalHistory = [...finalSameLevelModeRecords, ...otherRecords];
+    const finalHistory = [...organizedRecords, ...otherRecords];
 
     await savePlayHistory(finalHistory);
   } catch (error) {
-    console.error('Failed to add play history:', error);
+    handleStorageError('addPlayHistory', error);
     throw error;
   }
 };
@@ -293,7 +336,7 @@ export const clearPlayHistory = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(STORAGE_KEYS.PLAY_HISTORY);
   } catch (error) {
-    console.error('Failed to clear play history:', error);
+    handleStorageError('clearPlayHistory', error);
     throw error;
   }
 };

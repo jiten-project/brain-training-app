@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { Text, Button, Card } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, GamePhase, ImageData, GameMode, MathProblem } from '../types';
-import { UI_CONFIG, formatTime, MATH_REQUIRED_CORRECT_COUNT } from '../utils/constants';
-import { generateCorrectImages, generateChoiceImages, evaluateGameResult, generateMathProblem } from '../utils/gameLogic';
+import { RootStackParamList, GamePhase, ImageData, GameMode } from '../types';
+import { UI_CONFIG, formatTime, getGridColumns } from '../utils/constants';
+import { generateCorrectImages, generateChoiceImages, evaluateGameResult } from '../utils/gameLogic';
 import { shuffleArray } from '../utils/shuffle';
 import { useGame } from '../contexts/GameContext';
+import { useGameTimer, useMathProblem, useHint } from '../hooks';
 import ImageGridItem from '../components/ImageGridItem';
 
 type GameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Game'>;
@@ -22,41 +23,28 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
   const { level } = route.params;
   const { settings } = useGame();
 
+  // フェーズ管理
   const [phase, setPhase] = useState<GamePhase>(GamePhase.COUNTDOWN_MEMORIZE);
-  const [countdown, setCountdown] = useState<number>(3); // カウントダウン用
+  const [countdown, setCountdown] = useState<number>(3);
+
+  // 画像管理
   const [correctImages, setCorrectImages] = useState<ImageData[]>([]);
   const [choiceImages, setChoiceImages] = useState<ImageData[]>([]);
   const [shuffledChoiceImages, setShuffledChoiceImages] = useState<ImageData[]>([]);
   const [selectedImages, setSelectedImages] = useState<ImageData[]>([]);
-  const [memorizeStartTime, setMemorizeStartTime] = useState<number>(0);
-  const [memorizeElapsedTime, setMemorizeElapsedTime] = useState<number>(0);
-  const [answerStartTime, setAnswerStartTime] = useState<number>(0);
-  const [answerElapsedTime, setAnswerElapsedTime] = useState<number>(0);
 
-  // ヒント機能の状態
-  const [hintUsed, setHintUsed] = useState(false); // ヒントが使用されたか
-  const [showingHint, setShowingHint] = useState(false); // ヒント表示中か
-
-  // 計算フェーズの状態（超級モード用）
-  const [currentMathProblem, setCurrentMathProblem] = useState<MathProblem | null>(null);
-  const [mathCorrectCount, setMathCorrectCount] = useState(0); // 正解した問題数
-  const [mathAnswer, setMathAnswer] = useState(''); // ユーザーの回答入力
-  const [mathFeedback, setMathFeedback] = useState<'correct' | 'incorrect' | null>(null); // 正誤フィードバック
-  const mathInputRef = useRef<TextInput>(null);
+  // カスタムHook使用
+  const memorizeTimer = useGameTimer();
+  const answerTimer = useGameTimer();
+  const mathProblem = useMathProblem();
+  const hint = useHint(settings.gameMode);
 
   // ゲーム初期化
   useEffect(() => {
-    const initGame = () => {
-      // 正解の画像をランダムに選択
-      const correct = generateCorrectImages(level);
-      setCorrectImages(correct);
-
-      // 設定に応じた選択肢を生成
-      const choices = generateChoiceImages(correct, level, settings.gameMode);
-      setChoiceImages(choices);
-    };
-
-    initGame();
+    const correct = generateCorrectImages(level);
+    setCorrectImages(correct);
+    const choices = generateChoiceImages(correct, level, settings.gameMode);
+    setChoiceImages(choices);
   }, [level, settings.gameMode]);
 
   // カウントダウンロジック
@@ -69,217 +57,120 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
       }, 1000);
       return () => clearTimeout(timer);
     } else {
-      // カウントダウン終了後の処理
       if (phase === GamePhase.COUNTDOWN_MEMORIZE) {
         setPhase(GamePhase.MEMORIZE);
-        setMemorizeStartTime(Date.now());
+        memorizeTimer.startTimer();
       } else if (phase === GamePhase.COUNTDOWN_ANSWER) {
         setPhase(GamePhase.ANSWER);
-        setAnswerStartTime(Date.now());
+        answerTimer.startTimer();
       }
     }
-  }, [phase, countdown]);
+  }, [phase, countdown, memorizeTimer, answerTimer]);
 
-  // 記憶フェーズの経過時間の更新
-  useEffect(() => {
-    if (phase !== GamePhase.MEMORIZE) return;
-
-    const interval = setInterval(() => {
-      setMemorizeElapsedTime(Date.now() - memorizeStartTime);
-    }, 10); // 10msごとに更新
-
-    return () => clearInterval(interval);
-  }, [phase, memorizeStartTime]);
-
-  // 回答フェーズの経過時間の更新
-  useEffect(() => {
-    if (phase !== GamePhase.ANSWER) return;
-
-    const interval = setInterval(() => {
-      setAnswerElapsedTime(Date.now() - answerStartTime);
-    }, 10); // 10msごとに更新
-
-    return () => clearInterval(interval);
-  }, [phase, answerStartTime]);
-
-  const handleMemorized = () => {
-    // 回答フェーズの画像をシャッフル
+  const handleMemorized = useCallback(() => {
+    memorizeTimer.stopTimer();
     setShuffledChoiceImages(shuffleArray(choiceImages));
 
-    // 超級モードの場合、計算フェーズに遷移
     if (settings.gameMode === GameMode.EXPERT) {
-      setMathCorrectCount(0);
-      setMathAnswer('');
-      setMathFeedback(null);
-      setCurrentMathProblem(generateMathProblem());
+      mathProblem.resetMath();
       setPhase(GamePhase.CALCULATION);
     } else {
-      // その他のモードはカウントダウンフェーズに遷移
       setCountdown(3);
       setPhase(GamePhase.COUNTDOWN_ANSWER);
     }
-  };
+  }, [memorizeTimer, choiceImages, settings.gameMode, mathProblem]);
 
-  const handleImageSelect = (image: ImageData) => {
-    const isSelected = selectedImages.some(img => img.id === image.id);
-    if (isSelected) {
-      // 選択解除
-      setSelectedImages(selectedImages.filter(img => img.id !== image.id));
-    } else {
-      // 選択数が上限に達していない場合のみ追加
-      if (selectedImages.length < correctImages.length) {
-        setSelectedImages([...selectedImages, image]);
+  const handleImageSelect = useCallback((image: ImageData) => {
+    setSelectedImages(prev => {
+      const isSelected = prev.some(img => img.id === image.id);
+      if (isSelected) {
+        return prev.filter(img => img.id !== image.id);
       }
-    }
-  };
+      if (prev.length < correctImages.length) {
+        return [...prev, image];
+      }
+      return prev;
+    });
+  }, [correctImages.length]);
 
-  const handleConfirm = () => {
-    // 正しい枚数が選択されているか確認
-    if (selectedImages.length !== correctImages.length) {
-      return;
-    }
-    // ゲーム結果を評価
+  const handleConfirm = useCallback(() => {
+    if (selectedImages.length !== correctImages.length) return;
+
+    answerTimer.stopTimer();
     const result = evaluateGameResult(
       correctImages,
       selectedImages,
       choiceImages,
       level,
-      memorizeElapsedTime,
-      answerElapsedTime
+      memorizeTimer.elapsedTime,
+      answerTimer.elapsedTime
     );
     navigation.navigate('Result', { result });
-  };
+  }, [selectedImages, correctImages, choiceImages, level, memorizeTimer.elapsedTime, answerTimer.elapsedTime, navigation, answerTimer]);
 
-  // 計算問題の回答を送信
-  const handleMathSubmit = () => {
-    if (!currentMathProblem || mathAnswer.trim() === '') return;
-
-    const userAnswerNum = parseInt(mathAnswer, 10);
-    const isCorrect = userAnswerNum === currentMathProblem.answer;
-
-    if (isCorrect) {
-      setMathFeedback('correct');
-      const newCorrectCount = mathCorrectCount + 1;
-      setMathCorrectCount(newCorrectCount);
-
-      // 必要数正解したら回答フェーズへ
-      if (newCorrectCount >= MATH_REQUIRED_CORRECT_COUNT) {
-        setTimeout(() => {
-          setPhase(GamePhase.ANSWER);
-          setAnswerStartTime(Date.now());
-        }, 500);
-      } else {
-        // 次の問題へ
-        setTimeout(() => {
-          setMathFeedback(null);
-          setMathAnswer('');
-          setCurrentMathProblem(generateMathProblem());
-          mathInputRef.current?.focus();
-        }, 500);
-      }
-    } else {
-      // 不正解の場合は新しい問題を生成
-      setMathFeedback('incorrect');
+  const handleMathSubmit = useCallback(() => {
+    const completed = mathProblem.submitAnswer();
+    if (completed) {
       setTimeout(() => {
-        setMathFeedback(null);
-        setMathAnswer('');
-        setCurrentMathProblem(generateMathProblem());
-        mathInputRef.current?.focus();
-      }, 1000);
+        setPhase(GamePhase.ANSWER);
+        answerTimer.startTimer();
+      }, 500);
     }
-  };
+  }, [mathProblem, answerTimer]);
 
-  // ヒント機能
-  const handleUseHint = () => {
-    if (hintUsed || !settings.hintEnabled) return;
-
-    setHintUsed(true);
-
-    if (settings.gameMode === GameMode.BEGINNER) {
-      // 初級: 4秒間正解画像を再表示
-      setShowingHint(true);
-      setTimeout(() => {
-        setShowingHint(false);
-      }, 4000);
-    } else if (settings.gameMode === GameMode.INTERMEDIATE) {
-      // 中級: 2秒間正解画像を再表示
-      setShowingHint(true);
-      setTimeout(() => {
-        setShowingHint(false);
-      }, 2000);
+  const handleUseHint = useCallback(() => {
+    if (hint.canUseHint(settings.gameMode, settings.hintEnabled)) {
+      hint.useHint();
     }
-  };
+  }, [hint, settings.gameMode, settings.hintEnabled]);
 
-  const isImageSelected = (imageId: string) => {
+  const isImageSelected = useCallback((imageId: string) => {
     return selectedImages.some(img => img.id === imageId);
-  };
+  }, [selectedImages]);
 
-  const getGridColumns = (count: number) => {
-    if (count <= 4) return 2;
-    return 6;
-  };
-
-  const displayImages = phase === GamePhase.MEMORIZE
-    ? correctImages
-    : shuffledChoiceImages;
+  const displayImages = phase === GamePhase.MEMORIZE ? correctImages : shuffledChoiceImages;
   const columns = getGridColumns(displayImages.length);
-
-  // ヒントボタンを表示するかどうか
-  const shouldShowHintButton =
-    phase === GamePhase.ANSWER &&
-    settings.hintEnabled &&
-    !hintUsed &&
-    (settings.gameMode === GameMode.BEGINNER || settings.gameMode === GameMode.INTERMEDIATE);
-
-  // ヒント説明テキストを取得
-  const getHintDescription = () => {
-    if (settings.gameMode === GameMode.BEGINNER) {
-      return '正解の画像を4秒間もう一度表示します。\n記憶を確認できます。';
-    } else if (settings.gameMode === GameMode.INTERMEDIATE) {
-      return '正解の画像を2秒間もう一度表示します。\n記憶を確認できます。';
-    }
-    return '';
-  };
+  const shouldShowHintButton = phase === GamePhase.ANSWER && hint.canUseHint(settings.gameMode, settings.hintEnabled);
 
   // 計算フェーズの表示（超級モード）
-  if (phase === GamePhase.CALCULATION && currentMathProblem) {
+  if (phase === GamePhase.CALCULATION && mathProblem.currentProblem) {
     return (
       <View style={styles.container}>
         <View style={styles.calculationContainer}>
           <Text style={styles.calculationTitle}>計算問題</Text>
           <Text style={styles.calculationProgress}>
-            正解数: {mathCorrectCount} / {MATH_REQUIRED_CORRECT_COUNT}
+            正解数: {mathProblem.correctCount} / {mathProblem.requiredCount}
           </Text>
 
           <View style={styles.mathProblemCard}>
             <Text style={styles.mathProblem}>
-              {currentMathProblem.num1} {currentMathProblem.operator} {currentMathProblem.num2} = ?
+              {mathProblem.currentProblem.num1} {mathProblem.currentProblem.operator} {mathProblem.currentProblem.num2} = ?
             </Text>
           </View>
 
           <TextInput
-            ref={mathInputRef}
+            ref={mathProblem.inputRef}
             style={[
               styles.mathInput,
-              mathFeedback === 'correct' && styles.mathInputCorrect,
-              mathFeedback === 'incorrect' && styles.mathInputIncorrect,
+              mathProblem.feedback === 'correct' && styles.mathInputCorrect,
+              mathProblem.feedback === 'incorrect' && styles.mathInputIncorrect,
             ]}
-            value={mathAnswer}
-            onChangeText={setMathAnswer}
+            value={mathProblem.answer}
+            onChangeText={mathProblem.setAnswer}
             keyboardType="numeric"
             placeholder="答えを入力"
             placeholderTextColor="#999"
             autoFocus
             onSubmitEditing={handleMathSubmit}
-            editable={mathFeedback === null}
+            editable={mathProblem.feedback === null}
           />
 
-          {mathFeedback && (
+          {mathProblem.feedback && (
             <Text style={[
               styles.mathFeedback,
-              mathFeedback === 'correct' ? styles.mathFeedbackCorrect : styles.mathFeedbackIncorrect
+              mathProblem.feedback === 'correct' ? styles.mathFeedbackCorrect : styles.mathFeedbackIncorrect
             ]}>
-              {mathFeedback === 'correct' ? '正解！' : `不正解... 答えは ${currentMathProblem.answer}`}
+              {mathProblem.feedback === 'correct' ? '正解！' : `不正解... 答えは ${mathProblem.currentProblem.answer}`}
             </Text>
           )}
 
@@ -289,13 +180,13 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
             style={styles.mathSubmitButton}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
-            disabled={mathAnswer.trim() === '' || mathFeedback !== null}
+            disabled={mathProblem.answer.trim() === '' || mathProblem.feedback !== null}
           >
             回答する
           </Button>
 
           <Text style={styles.calculationHint}>
-            {MATH_REQUIRED_CORRECT_COUNT}問正解すると回答フェーズに進みます
+            {mathProblem.requiredCount}問正解すると回答フェーズに進みます
           </Text>
         </View>
       </View>
@@ -324,7 +215,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       {/* ヒント表示中のオーバーレイ */}
-      {showingHint && (
+      {hint.showingHint && (
         <View style={styles.hintOverlay}>
           <Card style={styles.hintCard}>
             <Card.Content>
@@ -357,7 +248,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
           </Text>
           {phase === GamePhase.MEMORIZE && (
             <Text style={styles.timerText}>
-              経過時間: {formatTime(memorizeElapsedTime)}秒
+              経過時間: {formatTime(memorizeTimer.elapsedTime)}秒
             </Text>
           )}
           {phase === GamePhase.ANSWER && (
@@ -366,7 +257,7 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
                 選択中: {selectedImages.length} / {correctImages.length}
               </Text>
               <Text style={styles.timerText}>
-                経過時間: {formatTime(answerElapsedTime)}秒
+                経過時間: {formatTime(answerTimer.elapsedTime)}秒
               </Text>
             </>
           )}
@@ -407,6 +298,8 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
             style={styles.button}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
+            accessibilityLabel="覚えた"
+            accessibilityHint="タップして回答フェーズに進む"
           >
             覚えた
           </Button>
@@ -414,8 +307,8 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
           <>
             {shouldShowHintButton && (
               <>
-                <Text style={styles.hintDescription}>
-                  {getHintDescription()}
+                <Text style={styles.hintDescription} accessibilityRole="text">
+                  {hint.getHintDescription()}
                 </Text>
                 <Button
                   mode="outlined"
@@ -424,13 +317,15 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
                   contentStyle={styles.buttonContent}
                   labelStyle={styles.buttonLabel}
                   icon="lightbulb-outline"
+                  accessibilityLabel="ヒントを使う"
+                  accessibilityHint="正解の画像を一時的に表示します"
                 >
                   ヒントを使う
                 </Button>
               </>
             )}
-            {hintUsed && (
-              <Text style={styles.hintUsedText}>
+            {hint.hintUsed && (
+              <Text style={styles.hintUsedText} accessibilityLabel="ヒントを使用済み">
                 ✓ ヒントを使用しました
               </Text>
             )}
@@ -441,6 +336,8 @@ const GameScreen: React.FC<Props> = ({ navigation, route }) => {
               style={styles.button}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
+              accessibilityLabel={`確認する、${selectedImages.length}枚選択中、${correctImages.length}枚必要`}
+              accessibilityHint={selectedImages.length === correctImages.length ? 'タップして回答を確認' : `あと${correctImages.length - selectedImages.length}枚選んでください`}
             >
               確認する
             </Button>
@@ -593,7 +490,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#FF9800',
   },
-  // 計算フェーズのスタイル
   calculationContainer: {
     flex: 1,
     justifyContent: 'flex-start',

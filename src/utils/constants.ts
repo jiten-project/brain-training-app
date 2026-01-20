@@ -126,6 +126,34 @@ export const DEFAULT_SETTINGS = {
 export const MATH_REQUIRED_CORRECT_COUNT = 3; // 回答フェーズに進むために必要な正解数
 
 /**
+ * タイミング設定（ミリ秒）
+ */
+export const TIMING = {
+  // カウントダウン
+  COUNTDOWN_INTERVAL: 1000, // 1秒ごとにカウントダウン
+  // タイマー更新間隔
+  TIMER_UPDATE_INTERVAL: 100, // 100msごとに表示更新
+  // フィードバック表示時間
+  FEEDBACK_CORRECT_DELAY: 500, // 正解時の遅延
+  FEEDBACK_INCORRECT_DELAY: 1000, // 不正解時の遅延
+  // ヒント表示時間
+  HINT_DURATION_BEGINNER: 4000, // 初級: 4秒
+  HINT_DURATION_INTERMEDIATE: 2000, // 中級: 2秒
+  // アニメーション
+  ANIMATION_PRESS: 200, // タップアニメーション
+  ANIMATION_SELECT: 500, // 選択アニメーション
+};
+
+/**
+ * 正解率の閾値
+ */
+export const ACCURACY_THRESHOLDS = {
+  PERFECT: 100, // パーフェクト
+  CLEARED: 80, // クリア
+  CLOSE: 60, // 惜しい
+};
+
+/**
  * 応援メッセージ
  */
 export const ENCOURAGEMENT_MESSAGES = {
@@ -162,11 +190,11 @@ export const ENCOURAGEMENT_MESSAGES = {
  */
 export const getEncouragementMessage = (accuracy: number): string => {
   const messages =
-    accuracy === 100
+    accuracy === ACCURACY_THRESHOLDS.PERFECT
       ? ENCOURAGEMENT_MESSAGES.PERFECT
-      : accuracy >= 80
+      : accuracy >= ACCURACY_THRESHOLDS.CLEARED
         ? ENCOURAGEMENT_MESSAGES.CLEARED
-        : accuracy >= 60
+        : accuracy >= ACCURACY_THRESHOLDS.CLOSE
           ? ENCOURAGEMENT_MESSAGES.CLOSE
           : ENCOURAGEMENT_MESSAGES.FAILED;
 
@@ -182,4 +210,40 @@ export const formatTime = (ms: number): string => {
   const seconds = Math.floor(ms / 1000);
   const milliseconds = Math.floor((ms % 1000) / 10); // 10ms単位
   return `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
+};
+
+/**
+ * 日付を「YYYY/MM/DD HH:mm」形式にフォーマット
+ * @param dateString ISO日付文字列
+ * @returns フォーマットされた日付文字列
+ */
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}/${month}/${day} ${hours}:${minutes}`;
+};
+
+/**
+ * グリッドの列数を決定
+ * @param count 画像数
+ * @returns 列数
+ */
+export const getGridColumns = (count: number): number => {
+  if (count <= 4) return 2;
+  return 6;
+};
+
+/**
+ * ユニークIDを生成
+ * @param prefix プレフィックス
+ * @returns ユニークID
+ */
+export const generateId = (prefix: string = ''): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 11);
+  return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
 };

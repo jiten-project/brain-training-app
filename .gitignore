@@ -9,14 +9,39 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native (generated)
+ios/
+android/
 .kotlin/
+
+# Credentials & Certificates
+credentials/
+credentials.json
+google-services.json
+GoogleService-Info.plist
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.pem
+*.cer
+*.crt
+*.der
+*.pfx
+*.certSigningRequest
+
+# Secrets & API Keys
+secrets/
+*.secret
+*.secrets
+*-secret.json
+*-secrets.json
+api-key*
+apikey*
+.npmrc
+.yarnrc
 
 # Metro
 .metro-health-check*
@@ -28,17 +53,107 @@ yarn-error.*
 
 # macOS
 .DS_Store
-*.pem
+*.swp
+*~
+.AppleDouble
+.LSOverride
+._*
 
 # local env files
+.env
+.env.*
 .env*.local
+*.env
+.envrc
+.direnv/
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+*.code-workspace
 
-# e2e
-/e2e
+# testing
+coverage/
+.nyc_output/
+
+# App Store screenshots (keep in separate folder if needed)
+noutore*.png
+*-ipad*.png
+debug-screenshot.png
+
+# Claude Code
+.claude/
+
+# Serena
+.serena/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+*.ipa
+*.apk
+*.aab
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# EAS
+.eas/
+eas.json.local
+
+# Firebase / Google Cloud
+firebase-debug.log
+.firebase/
+firebaserc.local
+
+# AWS
+.aws/
+aws-exports.js
+
+# SSH & Auth
+*.ppk
+id_rsa*
+id_ed25519*
+known_hosts
+
+# Watchman
+.watchmanconfig
+
+# Jest
+jest.config.js.bak
+
+# Package manager locks (keep only one)
+# yarn.lock
+# pnpm-lock.yaml
+
+# Database & Cache
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+redis-data/
+
+# Session & Token files
+*.session
+*.token
+.tokens/
+
+# Sensitive data patterns
+*password*
+*PASSWORD*
+*credential*
+*CREDENTIAL*
+!**/test*password*
+!**/test*credential*
